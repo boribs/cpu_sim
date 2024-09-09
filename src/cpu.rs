@@ -33,6 +33,7 @@ impl Default for Cpu {
 
 impl Cpu {
     pub const FLAG_OVERFLOW: u8 = 0b0001;
+    pub const FLAG_ZERO: u8 = 0b0010;
 
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
@@ -100,7 +101,12 @@ impl Cpu {
                 }
             },
             Instruction::Div(a, b, dest) => {
-                let div = a / b;
+                let div = if b != 0 {
+                    a / b
+                } else {
+                    self.flags |= Self::FLAG_ZERO;
+                    0
+                };
 
                 // division cant be overflown
 
@@ -158,7 +164,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Sum(32767, 4, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
     #[test]
@@ -167,7 +173,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
     #[test]
@@ -187,7 +193,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
     #[test]
@@ -205,7 +211,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Mul(-32767, 32767, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
     #[test]
@@ -217,5 +223,15 @@ mod instruction_tests {
         assert_eq!(cpu.a, -1);
         assert_eq!(cpu.b, 2);
         assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn div_by_0() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Div(-32767, 0, Dest::RegA));
+        cpu.execute(Instruction::Div(4, 2, Dest::RegB));
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
     }
 }
