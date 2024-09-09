@@ -10,6 +10,7 @@ pub enum Instruction {
     Sum(i16, i16, Dest),
     Sub(i16, i16, Dest),
     Mul(i16, i16, Dest),
+    Div(i16, i16, Dest),
 }
 
 pub struct Cpu {
@@ -96,6 +97,18 @@ impl Cpu {
                     Dest::RegA => self.a = mul,
                     Dest::RegB => self.b = mul,
                     Dest::RegC => self.c = mul,
+                }
+            },
+            Instruction::Div(a, b, dest) => {
+                let div = a / b;
+
+                // division cant be overflown
+
+                match dest {
+                    Dest::Memory(_) => todo!(),
+                    Dest::RegA => self.a = div,
+                    Dest::RegB => self.b = div,
+                    Dest::RegC => self.c = div,
                 }
             }
         }
@@ -193,5 +206,16 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+    }
+
+    #[test]
+    fn div() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Div(-32767, 32767, Dest::RegA));
+        cpu.execute(Instruction::Div(4, 2, Dest::RegB));
+
+        assert_eq!(cpu.a, -1);
+        assert_eq!(cpu.b, 2);
+        assert_eq!(cpu.flags, 0);
     }
 }
