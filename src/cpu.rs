@@ -14,15 +14,23 @@ pub struct Cpu {
     a: i16,
     b: i16,
     c: i16,
+    flags: u8,
 }
 
 impl Default for Cpu {
     fn default() -> Self {
-        Cpu { a: 0, b: 0, c: 0 }
+        Cpu {
+            a: 0,
+            b: 0,
+            c: 0,
+            flags: 0,
+        }
     }
 }
 
 impl Cpu {
+    pub const FLAG_OVERFLOW: u8 = 0b0001;
+
     pub fn execute(&mut self, instr: Instruction) {
         match instr {
             Instruction::Ld(val, dest) => match dest {
@@ -32,9 +40,18 @@ impl Cpu {
                 Dest::RegC => self.c = val,
             },
             Instruction::Sum(a, b, dest) => {
-                let sum = a + b;
-                // TODO: Deal with possible overflow
+                let sum;
+
+                let checksum = a as i32 + b as i32;
+                if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
+                    sum = 0;
+                    self.flags |= Self::FLAG_OVERFLOW;
+                } else {
+                    sum = a + b;
+                }
+
                 // TOOD: propagate warning
+
                 match dest {
                     Dest::Memory(_) => todo!(),
                     Dest::RegA => self.a = sum,
@@ -78,5 +95,23 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, 6100);
         assert_eq!(cpu.b, -100);
+    }
+
+    #[test]
+    fn sum_with_overflow() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Sum(32767, 4, Dest::RegA));
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+    }
+
+    #[test]
+    fn sum_of_negatives_with_overflow() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA));
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
     }
 }
