@@ -9,6 +9,7 @@ pub enum Instruction {
     Ld(i16, Dest),
     Sum(i16, i16, Dest),
     Sub(i16, i16, Dest),
+    Mul(i16, i16, Dest),
 }
 
 pub struct Cpu {
@@ -76,6 +77,25 @@ impl Cpu {
                     Dest::RegA => self.a = sub,
                     Dest::RegB => self.b = sub,
                     Dest::RegC => self.c = sub,
+                }
+            },
+            Instruction::Mul(a, b, dest) => {
+                let mul;
+
+                let checkmul = a as i32 * b as i32;
+                if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
+                    mul = 0;
+                    self.flags |= Self::FLAG_OVERFLOW;
+                    // TOOD: propagate warning
+                } else {
+                    mul = a * b;
+                }
+
+                match dest {
+                    Dest::Memory(_) => todo!(),
+                    Dest::RegA => self.a = mul,
+                    Dest::RegB => self.b = mul,
+                    Dest::RegC => self.c = mul,
                 }
             }
         }
@@ -148,6 +168,23 @@ mod instruction_tests {
     fn sub_with_overflow() {
         let mut cpu = Cpu::default();
         cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA));
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+    }
+
+    #[test]
+    fn mul_within_16_bits() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Mul(4, -4, Dest::RegA));
+
+        assert_eq!(cpu.a, -16);
+    }
+
+    #[test]
+    fn mul_with_overflow() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Mul(-32767, 32767, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
