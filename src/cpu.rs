@@ -8,6 +8,7 @@ pub enum Dest {
 pub enum Instruction {
     Ld(i16, Dest),
     Sum(i16, i16, Dest),
+    Sub(i16, i16, Dest),
 }
 
 pub struct Cpu {
@@ -46,17 +47,35 @@ impl Cpu {
                 if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
                     sum = 0;
                     self.flags |= Self::FLAG_OVERFLOW;
+                    // TOOD: propagate warning
                 } else {
                     sum = a + b;
                 }
-
-                // TOOD: propagate warning
 
                 match dest {
                     Dest::Memory(_) => todo!(),
                     Dest::RegA => self.a = sum,
                     Dest::RegB => self.b = sum,
                     Dest::RegC => self.c = sum,
+                }
+            },
+            Instruction::Sub(a, b, dest) => {
+                let sub;
+
+                let checksub = a as i32 - b as i32;
+                if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
+                    sub = 0;
+                    self.flags |= Self::FLAG_OVERFLOW;
+                    // TOOD: propagate warning
+                } else {
+                    sub = a - b;
+                }
+
+                match dest {
+                    Dest::Memory(_) => todo!(),
+                    Dest::RegA => self.a = sub,
+                    Dest::RegB => self.b = sub,
+                    Dest::RegC => self.c = sub,
                 }
             }
         }
@@ -110,6 +129,25 @@ mod instruction_tests {
     fn sum_of_negatives_with_overflow() {
         let mut cpu = Cpu::default();
         cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA));
+
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
+    }
+
+    #[test]
+    fn sub_within_16_bits() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Sub(3000, 3100, Dest::RegA));
+        cpu.execute(Instruction::Sub(3000, -3100, Dest::RegB));
+
+        assert_eq!(cpu.a, -100);
+        assert_eq!(cpu.b, 6100);
+    }
+
+    #[test]
+    fn sub_with_overflow() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA));
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & (1 >> Cpu::FLAG_OVERFLOW - 1) != 0);
