@@ -112,6 +112,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Ld(-5, Dest::RegA));
 
         assert_eq!(cpu.a, -5);
+        assert_eq!(cpu.flags, 0);
     }
 
     #[test]
@@ -124,6 +125,7 @@ mod instruction_tests {
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.b, 1);
         assert_eq!(cpu.c, 2020);
+        assert_eq!(cpu.flags, 0);
     }
 
     #[test]
@@ -134,6 +136,7 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, 6100);
         assert_eq!(cpu.b, -100);
+        assert_eq!(cpu.flags, 0);
     }
 
     #[test]
@@ -162,6 +165,7 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, -100);
         assert_eq!(cpu.b, 6100);
+        assert_eq!(cpu.flags, 0);
     }
 
     #[test]
@@ -179,6 +183,7 @@ mod instruction_tests {
         cpu.execute(Instruction::Mul(4, -4, Dest::RegA));
 
         assert_eq!(cpu.a, -16);
+        assert_eq!(cpu.flags, 0);
     }
 
     #[test]
