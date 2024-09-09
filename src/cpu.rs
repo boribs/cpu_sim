@@ -7,6 +7,7 @@ pub enum Dest {
 
 pub enum Instruction {
     Ld(i16, Dest),
+    Sum(i16, i16, Dest),
 }
 
 pub struct Cpu {
@@ -30,6 +31,17 @@ impl Cpu {
                 Dest::RegB => self.b = val,
                 Dest::RegC => self.c = val,
             },
+            Instruction::Sum(a, b, dest) => {
+                let sum = a + b;
+                // TODO: Deal with possible overflow
+                // TOOD: propagate warning
+                match dest {
+                    Dest::Memory(_) => todo!(),
+                    Dest::RegA => self.a = sum,
+                    Dest::RegB => self.b = sum,
+                    Dest::RegC => self.c = sum,
+                }
+            }
         }
     }
 }
@@ -56,5 +68,15 @@ mod instruction_tests {
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.b, 1);
         assert_eq!(cpu.c, 2020);
+    }
+
+    #[test]
+    fn sum_within_16_bits() {
+        let mut cpu = Cpu::default();
+        cpu.execute(Instruction::Sum(3000, 3100, Dest::RegA));
+        cpu.execute(Instruction::Sum(3000, -3100, Dest::RegB));
+
+        assert_eq!(cpu.a, 6100);
+        assert_eq!(cpu.b, -100);
     }
 }
