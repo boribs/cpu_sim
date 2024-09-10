@@ -13,7 +13,7 @@ pub enum Dest {
 pub enum Instruction {
     Ld(i16, Dest),
     Sum(Reg, Reg),
-    // Sub(i16, Dest),
+    Sub(Reg, Reg),
     // Mul(i16, Dest),
     // Div(i16, Dest),
 }
@@ -113,25 +113,25 @@ impl Cpu {
 
                 self.reg_write(b, sum);
             },
-        //     Instruction::Sub(a, b, dest) => {
-        //         let sub;
+            Instruction::Sub(a, b) => {
+                let sub;
 
-        //         let checksub = a as i32 - b as i32;
-        //         if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
-        //             sub = 0;
-        //             self.flags |= Self::FLAG_OVERFLOW;
-        //             // TOOD: propagate warning
-        //         } else {
-        //             sub = a - b;
-        //         }
+                {
+                    let a = self.reg_read(a);
+                    let b = self.reg_read(b);
 
-        //         match dest {
-        //             Dest::Memory(i) => mem.write(i.into(), sub),
-        //             Dest::RegA => self.a = sub,
-        //             Dest::RegB => self.b = sub,
-        //             Dest::RegC => self.c = sub,
-        //         }
-        //     },
+                    let checksub = a as i32 - b as i32;
+                    if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
+                        sub = 0;
+                        self.flags |= Self::FLAG_OVERFLOW;
+                        // TOOD: propagate warning
+                    } else {
+                        sub = a - b;
+                    }
+                }
+
+                self.reg_write(b, sub);
+            },
         //     Instruction::Mul(a, b, dest) => {
         //         let mul;
 
@@ -248,29 +248,27 @@ mod instruction_tests {
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
-    // #[test]
-    // fn sub_within_16_bits() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Sub(3000, 3100, Dest::RegA), &mut mem);
-    //     cpu.execute(Instruction::Sub(3000, -3100, Dest::RegB), &mut mem);
-    //     cpu.execute(Instruction::Sub(1, 2, Dest::Memory(0)), &mut mem);
+    #[test]
+    fn sub_within_16_bits() {
+        let mut cpu = Cpu::vals(3000, -3100, 15);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sub(Reg::A, Reg::C), &mut mem);
 
-    //     assert_eq!(cpu.a, -100);
-    //     assert_eq!(cpu.b, 6100);
-    //     assert_eq!(mem.read(0), -1);
-    //     assert_eq!(cpu.flags, 0);
-    // }
+        assert_eq!(cpu.b, 6100);
+        assert_eq!(cpu.c, 2985);
+        assert_eq!(cpu.flags, 0);
+    }
 
-    // #[test]
-    // fn sub_with_overflow() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA), &mut mem);
+    #[test]
+    fn sub_with_overflow() {
+        let mut cpu = Cpu::vals(-32767, 4, 0);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
 
-    //     assert_eq!(cpu.a, 0);
-    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    // }
+        assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    }
 
     // #[test]
     // fn mul_within_16_bits() {
