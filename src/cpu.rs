@@ -3,6 +3,7 @@ pub enum Reg {
     A,
     B,
     C,
+    D,
 }
 
 pub enum Dest {
@@ -54,6 +55,7 @@ pub struct Cpu {
     a: i16,
     b: i16,
     c: i16,
+    d: i16,
     flags: u8,
 }
 
@@ -63,6 +65,7 @@ impl Default for Cpu {
             a: 0,
             b: 0,
             c: 0,
+            d: 0,
             flags: 0,
         }
     }
@@ -77,6 +80,7 @@ impl Cpu {
             Reg::A => self.a = value,
             Reg::B => self.b = value,
             Reg::C => self.c = value,
+            Reg::D => self.d = value,
         }
     }
 
@@ -85,6 +89,7 @@ impl Cpu {
             Reg::A => self.a,
             Reg::B => self.b,
             Reg::C => self.c,
+            Reg::D => self.d,
         }
     }
 
@@ -178,7 +183,7 @@ mod instruction_tests {
 
     impl Cpu {
         fn vals(a: i16, b: i16, c: i16) -> Self {
-            Cpu { a, b, c, flags: 0 }
+            Cpu { a, b, c, d: 0, flags: 0 }
         }
     }
 
