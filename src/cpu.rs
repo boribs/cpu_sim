@@ -32,6 +32,7 @@ pub enum Instruction {
     Jmp(Inpt),
     Jeq(Inpt),
     Jne(Inpt),
+    Jgt(Inpt),
 }
 
 pub struct Mem {
@@ -244,6 +245,16 @@ impl Cpu {
                 } as u16;
 
                 if self.flags & Self::FLAG_EQUAL == 0 {
+                    self.ip = to;
+                }
+            }
+            Instruction::Jgt(to) => {
+                let to = match to {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                } as u16;
+
+                if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
                     self.ip = to;
                 }
             }
@@ -497,6 +508,30 @@ mod instruction_tests {
         cpu.execute(Instruction::Jne(Inpt::Const(0xab)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
+        assert_eq!(cpu.ip, 0);
+    }
+
+    #[test]
+    fn jgt_with_greater_than_flag_set() {
+        let mut cpu = Cpu::vals(4, 7, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Jgt(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
+        assert_eq!(cpu.ip, 0xab);
+    }
+
+    #[test]
+    fn jgt_without_greater_than_flag_set() {
+        let mut cpu = Cpu::vals(4, 4, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jgt(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == 0);
         assert_eq!(cpu.ip, 0);
     }
 }

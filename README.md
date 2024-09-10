@@ -1,6 +1,6 @@
 # CPU simulation
 
-This project aims to be a simplified version of the Intel 8088, 16-bit CPU.
+A 16-bit simulated CPU, inspired by the Intel 8088.
 
 
 ## Roadmap
@@ -16,6 +16,7 @@ This project aims to be a simplified version of the Intel 8088, 16-bit CPU.
 | A        | General |
 | B        | General |
 | C        | General |
+| D        | General |
 | IP       | Instruction Pointer |
 
 ## Instruction set
@@ -24,7 +25,6 @@ NOTE:
 - `const` is a constant.
 - `reg` is a register.
 - `mem` is a memory address.
-- `tag` is a tag in the source code.
 
 > Every operation that modifies a value must be done within registers.
 > Eventually the compiler will allow for certain accomodations such as adding a value from memory.
@@ -48,7 +48,7 @@ NOTE:
 | jmp | Inconditional jump | jmp `<reg/const>` |
 | jeq | Jump if equal | jeq `<reg/const>` |
 | jne | Jump if not equal | jne `<reg/const>` |
-<!-- | jgt | Jump if greater than | jgt `<val>` `<val>` `<dest>` | -->
+| jgt | Jump if greater than | jgt `<reg/const>` |
 <!-- | jlt | Jump if lower than | jlt `<val>` `<val>` `<dest>` | -->
 
 ### Graphics Instructions
