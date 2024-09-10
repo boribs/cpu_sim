@@ -83,7 +83,7 @@ impl Cpu {
                 }
 
                 match dest {
-                    Dest::Memory(_) => todo!(),
+                    Dest::Memory(i) => mem.write(i.into(), sum),
                     Dest::RegA => self.a = sum,
                     Dest::RegB => self.b = sum,
                     Dest::RegC => self.c = sum,
@@ -191,9 +191,11 @@ mod instruction_tests {
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sum(3000, 3100, Dest::RegA), &mut mem);
         cpu.execute(Instruction::Sum(3000, -3100, Dest::RegB), &mut mem);
+        cpu.execute(Instruction::Sum(1, 4, Dest::Memory(1)), &mut mem);
 
         assert_eq!(cpu.a, 6100);
         assert_eq!(cpu.b, -100);
+        assert_eq!(mem.read(1), 5);
         assert_eq!(cpu.flags, 0);
     }
 
