@@ -17,6 +17,7 @@ pub enum Instruction {
     Sub(Reg, Reg),
     Mul(Reg, Reg),
     Div(Reg, Reg),
+    Cmp(Reg, Reg),
 }
 
 pub struct Mem {
@@ -72,8 +73,11 @@ impl Default for Cpu {
 }
 
 impl Cpu {
-    pub const FLAG_OVERFLOW: u8 = 0b0001;
-    pub const FLAG_ZERO: u8 = 0b0010;
+    pub const FLAG_OVERFLOW: u8 = 0b00000001;
+    pub const FLAG_ZERO: u8 = 0b00000010;
+    pub const FLAG_EQUAL: u8 = 0b00000100;
+    pub const FLAG_GREATER_THAN: u8 = 0b00001000;
+    pub const FLAG_LOWER_THAN: u8 = 0b00010000;
 
     pub fn reg_write(&mut self, reg: Reg, value: i16) {
         match reg {
@@ -93,6 +97,14 @@ impl Cpu {
         }
     }
 
+    pub fn flag_set(&mut self, flag: u8) {
+        self.flags |= flag;
+    }
+
+    // pub fn flag_unset(&mut self, flag: u8) {
+    //     self.flags &= !flag;
+    // }
+
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
             Instruction::Ld(val, dest) => match dest {
@@ -109,7 +121,7 @@ impl Cpu {
                     let checksum = a as i32 + b as i32;
                     if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
                         sum = 0;
-                        self.flags |= Self::FLAG_OVERFLOW;
+                        self.flag_set(Self::FLAG_OVERFLOW);
                         // TOOD: propagate warning
                     } else {
                         sum = a + b;
@@ -117,7 +129,7 @@ impl Cpu {
                 }
 
                 self.reg_write(b, sum);
-            },
+            }
             Instruction::Sub(a, b) => {
                 let sub;
 
@@ -128,7 +140,7 @@ impl Cpu {
                     let checksub = a as i32 - b as i32;
                     if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
                         sub = 0;
-                        self.flags |= Self::FLAG_OVERFLOW;
+                        self.flag_set(Self::FLAG_OVERFLOW);
                         // TOOD: propagate warning
                     } else {
                         sub = a - b;
@@ -136,7 +148,7 @@ impl Cpu {
                 }
 
                 self.reg_write(b, sub);
-            },
+            }
             Instruction::Mul(a, b) => {
                 let mul;
 
@@ -147,7 +159,7 @@ impl Cpu {
                     let checkmul = a as i32 * b as i32;
                     if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
                         mul = 0;
-                        self.flags |= Self::FLAG_OVERFLOW;
+                        self.flag_set(Self::FLAG_OVERFLOW);
                         // TOOD: propagate warning
                     } else {
                         mul = a * b;
@@ -155,7 +167,7 @@ impl Cpu {
                 }
 
                 self.reg_write(b, mul);
-            },
+            }
             Instruction::Div(a, b) => {
                 let div = {
                     let a = self.reg_read(a);
@@ -164,7 +176,7 @@ impl Cpu {
                     if b != 0 {
                         a / b
                     } else {
-                        self.flags |= Self::FLAG_ZERO;
+                        self.flag_set(Self::FLAG_ZERO);
                         0
                     }
                 };
@@ -172,6 +184,18 @@ impl Cpu {
                 // division can't be overflown
 
                 self.reg_write(b, div)
+            }
+            Instruction::Cmp(a, b) => {
+                let a = self.reg_read(a);
+                let b = self.reg_read(b);
+
+                if a > b {
+                    self.flag_set(Self::FLAG_GREATER_THAN);
+                } else if a < b {
+                    self.flag_set(Self::FLAG_LOWER_THAN);
+                } else {
+                    self.flag_set(Self::FLAG_EQUAL);
+                }
             }
         }
     }
@@ -183,7 +207,13 @@ mod instruction_tests {
 
     impl Cpu {
         fn vals(a: i16, b: i16, c: i16) -> Self {
-            Cpu { a, b, c, d: 0, flags: 0 }
+            Cpu {
+                a,
+                b,
+                c,
+                d: 0,
+                flags: 0,
+            }
         }
     }
 
@@ -315,5 +345,35 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
+    }
+
+    #[test]
+    fn compare_equal() {
+        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::C), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
+    }
+
+    #[test]
+    fn compare_greater_than() {
+        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::B, Reg::C), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
+    }
+
+    #[test]
+    fn compare_lower_than() {
+        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
 }
