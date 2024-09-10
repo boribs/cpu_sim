@@ -65,7 +65,7 @@ impl Cpu {
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
             Instruction::Ld(val, dest) => match dest {
-                Dest::Memory(_) => todo!(),
+                Dest::Memory(i) => mem.write(i.into(), val),
                 Dest::RegA => self.a = val,
                 Dest::RegB => self.b = val,
                 Dest::RegC => self.c = val,
@@ -174,6 +174,15 @@ mod instruction_tests {
         assert_eq!(cpu.b, 1);
         assert_eq!(cpu.c, 2020);
         assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn load_into_mem() {
+        let mut cpu = Cpu::default();
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
+
+        assert_eq!(mem.read(0), -5);
     }
 
     #[test]
