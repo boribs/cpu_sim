@@ -121,7 +121,7 @@ impl Cpu {
                 }
 
                 match dest {
-                    Dest::Memory(_) => todo!(),
+                    Dest::Memory(i) => mem.write(i.into(), mul),
                     Dest::RegA => self.a = mul,
                     Dest::RegB => self.b = mul,
                     Dest::RegC => self.c = mul,
@@ -248,8 +248,10 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(Instruction::Mul(4, -4, Dest::RegA), &mut mem);
+        cpu.execute(Instruction::Mul(45, 10, Dest::Memory(0)), &mut mem);
 
         assert_eq!(cpu.a, -16);
+        assert_eq!(mem.read(0), 450);
         assert_eq!(cpu.flags, 0);
     }
 
