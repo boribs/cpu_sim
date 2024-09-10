@@ -11,8 +11,13 @@ pub enum Dest {
     Register(Reg),
 }
 
+pub enum Inpt {
+    Const(i16),
+    Register(Reg),
+}
+
 pub enum Instruction {
-    Ld(i16, Dest),
+    Ld(Inpt, Dest),
     Sum(Reg, Reg),
     Sub(Reg, Reg),
     Mul(Reg, Reg),
@@ -107,10 +112,17 @@ impl Cpu {
 
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
-            Instruction::Ld(val, dest) => match dest {
-                Dest::Memory(i) => mem.write(i.into(), val),
-                Dest::Register(r) => self.reg_write(r, val),
-            },
+            Instruction::Ld(val, dest) => {
+                let val = match val {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                };
+
+                match dest {
+                    Dest::Memory(i) => mem.write(i.into(), val),
+                    Dest::Register(r) => self.reg_write(r, val),
+                }
+            }
             Instruction::Sum(a, b) => {
                 let sum;
 
@@ -221,7 +233,7 @@ mod instruction_tests {
     fn load_a() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::Register(Reg::A)), &mut mem);
+        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)), &mut mem);
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.flags, 0);
@@ -231,9 +243,9 @@ mod instruction_tests {
     fn load_abc() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::Register(Reg::A)), &mut mem);
-        cpu.execute(Instruction::Ld(1, Dest::Register(Reg::B)), &mut mem);
-        cpu.execute(Instruction::Ld(2020, Dest::Register(Reg::C)), &mut mem);
+        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)), &mut mem);
+        cpu.execute(Instruction::Ld(Inpt::Const(1), Dest::Register(Reg::B)), &mut mem);
+        cpu.execute(Instruction::Ld(Inpt::Const(2020), Dest::Register(Reg::C)), &mut mem);
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.b, 1);
@@ -245,7 +257,7 @@ mod instruction_tests {
     fn load_into_mem() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
+        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Memory(0)), &mut mem);
 
         assert_eq!(mem.read(0), -5);
         assert_eq!(cpu.flags, 0);
