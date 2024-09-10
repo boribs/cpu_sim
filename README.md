@@ -9,33 +9,57 @@ This project aims to be a simplified version of the Intel 8088, 16-bit CPU.
  - [ ] [Syscalls](#Syscalls)
  - [ ] [Graphics](#Graphics-Instructions) set
 
+## Registers
+
+| Register | Type |
+| -------- | ---- |
+| A        | General |
+| B        | General |
+| C        | General |
+| IP       | Instruction Pointer |
+
 ## Instruction set
+
+NOTE:
+- `const` is a constant.
+- `reg` is a register.
+- `mem` is a memory address.
+- `tag` is a tag in the source code.
+
+> Every operation that modifies a value must be done within registers.
+> Eventually the compiler will allow for certain accomodations such as adding a value from memory.
 
 ### Base Instructions
 
 | instruction | description | syntax |
 | ----------- | ----------- | ------ |
-| ld          | Loads a value into a location in memory | ld `<val>` `<dest>` |
-| sum         | Sums two values and stores the result into `dest`. | sum `<val>` `<val>` `<dest>` |
-| sub         | Subtracts two values and stores the result into `dest`. | sub `<val>` `<val>` `<dest>` |
-| mul         | Multiplies two values and stores the result into `dest`. | mul `<val>` `<val>` `<dest>` |
-| div         | Divides two values and stores the result into `dest`. | div `<val>` `<val>` `<dest>` |
-||||
-| push        | Pushes a `val` into the stack and increments the SP | push `<val>` |
-| pop         | Pops the last `val` from the stack and decrements SP | pop `<val>` |
-| call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` |
-||||
-| cmp | ... |
-| jeq | ... |
-| jne | ... |
-| jgt | ... |
-| jlt | ... |
+| ld          | Loads a value into either memory or a register | ld `<const>` `<reg/mem>` |
+| sum         | Adds the values of a and b and stores them in b. | sum `<reg a>` `<reg b>` |
+<!-- | sub         | Subtracts two values and stores the result into `dest`. | sub `<reg>` `<reg>` `<dest>` | -->
+<!-- | mul         | Multiplies two values and stores the result into `dest`. | mul `<reg>` `<reg>` `<dest>` | -->
+<!-- | div         | Divides two values and stores the result into `dest`. | div `<reg>` `<reg>` `<dest>` | -->
+<!-- |||| -->
+<!-- | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` | -->
+<!-- | pop         | Pops the last value from the stack and decrements SP | pop `<reg>` | -->
+<!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->
+<!-- | ret         | Pops value from stack and loads it into the instruction register | ret | -->
+<!-- |||| -->
+<!-- | jmp | Inconditional jump | jmp `<dest>` | -->
+<!-- | jeq | Jump if equal | jeq `<val>` `<val>` `<dest>` | -->
+<!-- | jne | Jump if not equal | jne `<val>` `<val>` `<dest>` | -->
+<!-- | jgt | Jump if greater than | jgt `<val>` `<val>` `<dest>` | -->
+<!-- | jlt | Jump if less than | jlt `<val>` `<val>` `<dest>` | -->
 
 ### Graphics Instructions
 Unimplemented.
 
 ## Flags
 
-Just like the 8088, this processor has a byte dedicated to storing flags
+Just like the 8088, this processor has a byte dedicated to storing flags.
+<!-- - Carry flag : carry on arithmetic -->
+<!-- - Sign       : to indicate whether a value is signed or unsigned -->
+- Overflow   : indicate if theres overflow after some arithmetics
+<!-- - Parity     : indicates whether a given number is odd or even -->
+- Zero       : indicates division by zero
 
 ## Syscalls
