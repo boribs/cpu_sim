@@ -176,6 +176,12 @@ impl Cpu {
 mod instruction_tests {
     use super::*;
 
+    impl Cpu {
+        fn vals(a: i16, b: i16, c: i16) -> Self {
+            Cpu { a, b, c, flags: 0 }
+        }
+    }
+
     #[test]
     fn load_a() {
         let mut cpu = Cpu::default();
@@ -200,48 +206,47 @@ mod instruction_tests {
         assert_eq!(cpu.flags, 0);
     }
 
-    // #[test]
-    // fn load_into_mem() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
+    #[test]
+    fn load_into_mem() {
+        let mut cpu = Cpu::default();
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
 
-    //     assert_eq!(mem.read(0), -5);
-    // }
+        assert_eq!(mem.read(0), -5);
+        assert_eq!(cpu.flags, 0);
+    }
 
-    // #[test]
-    // fn sum_within_16_bits() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Sum(3000, 3100, Dest::RegA), &mut mem);
-    //     cpu.execute(Instruction::Sum(3000, -3100, Dest::RegB), &mut mem);
-    //     cpu.execute(Instruction::Sum(1, 4, Dest::Memory(1)), &mut mem);
+    #[test]
+    fn sum_within_16_bits() {
+        let mut cpu = Cpu::vals(0, -3, 4);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sum(Reg::C, Reg::A), &mut mem);
 
-    //     assert_eq!(cpu.a, 6100);
-    //     assert_eq!(cpu.b, -100);
-    //     assert_eq!(mem.read(1), 5);
-    //     assert_eq!(cpu.flags, 0);
-    // }
+        assert_eq!(cpu.b, -3);
+        assert_eq!(cpu.a, 4);
+        assert_eq!(cpu.flags, 0);
+    }
 
-    // #[test]
-    // fn sum_with_overflow() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Sum(32767, 4, Dest::RegA), &mut mem);
+    #[test]
+    fn sum_with_overflow() {
+        let mut cpu = Cpu::vals(32767, 4, 0);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Sum(Reg::B, Reg::A), &mut mem);
 
-    //     assert_eq!(cpu.a, 0);
-    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    // }
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    }
 
-    // #[test]
-    // fn sum_of_negatives_with_overflow() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA), &mut mem);
+    #[test]
+    fn sum_of_negatives_with_overflow() {
+        let mut cpu = Cpu::vals(-32767, -4, 0);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
 
-    //     assert_eq!(cpu.a, 0);
-    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    // }
+        assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    }
 
     // #[test]
     // fn sub_within_16_bits() {
