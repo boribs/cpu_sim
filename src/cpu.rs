@@ -31,6 +31,7 @@ pub enum Instruction {
     Cmp(Reg, Reg),
     Jmp(Inpt),
     Jeq(Inpt),
+    Jne(Inpt),
 }
 
 pub struct Mem {
@@ -236,6 +237,16 @@ impl Cpu {
                     self.ip = to;
                 }
             }
+            Instruction::Jne(to) => {
+                let to = match to {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                } as u16;
+
+                if self.flags & Self::FLAG_EQUAL == 0 {
+                    self.ip = to;
+                }
+            }
         }
     }
 }
@@ -295,7 +306,10 @@ mod instruction_tests {
     fn load_into_mem() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(GenerousInpt::Const(-5), Dest::Memory(0)), &mut mem);
+        cpu.execute(
+            Instruction::Ld(GenerousInpt::Const(-5), Dest::Memory(0)),
+            &mut mem,
+        );
 
         assert_eq!(mem.read(0), -5);
         assert_eq!(cpu.flags, 0);
@@ -459,6 +473,30 @@ mod instruction_tests {
         cpu.execute(Instruction::Jeq(Inpt::Const(0xab)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
+        assert_eq!(cpu.ip, 0);
+    }
+
+    #[test]
+    fn jne_after_not_equal_number_comparison() {
+        let mut cpu = Cpu::vals(3, -3, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jne(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
+        assert_eq!(cpu.ip, 0xab);
+    }
+
+    #[test]
+    fn jne_doesnt_jmp_if_flag_eq_set() {
+        let mut cpu = Cpu::vals(4, 4, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jne(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
         assert_eq!(cpu.ip, 0);
     }
 }

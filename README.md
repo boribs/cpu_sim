@@ -36,7 +36,7 @@ NOTE:
 | ld          | Loads a value into either memory or a register | ld `<const>` `<reg/mem>` |
 | sum         | Adds the values of a and b and stores the result in b. | sum `<reg a>` `<reg b>` |
 | sub         | Subtracts the values of a and b and stores the result b. | sub `<reg a>` `<reg b>`|
-| mul         | Multiplies the values of a and b and stores the result b. | mul `<reg a >` `<reg b>` |
+| mul         | Multiplies the values of a and b and stores the result b. | mul `<reg a>` `<reg b>` |
 | div         | Divides the values of a and b and stores the result b. | div `<reg a>` `<reg b>` |
 ||||
 <!-- | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` | -->
@@ -46,8 +46,8 @@ NOTE:
 <!-- |||| -->
 | cmp | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
 | jmp | Inconditional jump | jmp `<reg/const>` |
-<!-- | jeq | Jump if equal | jeq `<val>` `<val>` `<dest>` | -->
-<!-- | jne | Jump if not equal | jne `<val>` `<val>` `<dest>` | -->
+| jeq | Jump if equal | jeq `<reg/const>` |
+| jne | Jump if not equal | jne `<reg/const>` |
 <!-- | jgt | Jump if greater than | jgt `<val>` `<val>` `<dest>` | -->
 <!-- | jlt | Jump if lower than | jlt `<val>` `<val>` `<dest>` | -->
 
