@@ -34,11 +34,11 @@ NOTE:
 | instruction | description | syntax |
 | ----------- | ----------- | ------ |
 | ld          | Loads a value into either memory or a register | ld `<const>` `<reg/mem>` |
-| sum         | Adds the values of a and b and stores them in b. | sum `<reg a>` `<reg b>` |
-<!-- | sub         | Subtracts two values and stores the result into `dest`. | sub `<reg>` `<reg>` `<dest>` | -->
-<!-- | mul         | Multiplies two values and stores the result into `dest`. | mul `<reg>` `<reg>` `<dest>` | -->
-<!-- | div         | Divides two values and stores the result into `dest`. | div `<reg>` `<reg>` `<dest>` | -->
-<!-- |||| -->
+| sum         | Adds the values of a and b and stores the result in b. | sum `<reg a>` `<reg b>` |
+| sub         | Subtracts the values of a and b and stores the result b. | sub `<reg a>` `<reg b>`|
+| mul         | Multiplies the values of a and b and stores the result b. | mul `<reg a >` `<reg b>` |
+| div         | Divides the values of a and b and stores the result b. | div `<reg a>` `<reg b>` |
+||||
 <!-- | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` | -->
 <!-- | pop         | Pops the last value from the stack and decrements SP | pop `<reg>` | -->
 <!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->

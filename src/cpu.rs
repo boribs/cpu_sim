@@ -15,7 +15,7 @@ pub enum Instruction {
     Sum(Reg, Reg),
     Sub(Reg, Reg),
     Mul(Reg, Reg),
-    // Div(i16, Dest),
+    Div(Reg, Reg),
 }
 
 pub struct Mem {
@@ -151,23 +151,23 @@ impl Cpu {
 
                 self.reg_write(b, mul);
             },
-        //     Instruction::Div(a, b, dest) => {
-        //         let div = if b != 0 {
-        //             a / b
-        //         } else {
-        //             self.flags |= Self::FLAG_ZERO;
-        //             0
-        //         };
+            Instruction::Div(a, b) => {
+                let div = {
+                    let a = self.reg_read(a);
+                    let b = self.reg_read(b);
 
-        //         // division can't be overflown
+                    if b != 0 {
+                        a / b
+                    } else {
+                        self.flags |= Self::FLAG_ZERO;
+                        0
+                    }
+                };
 
-        //         match dest {
-        //             Dest::Memory(i) => mem.write(i.into(), div),
-        //             Dest::RegA => self.a = div,
-        //             Dest::RegB => self.b = div,
-        //             Dest::RegC => self.c = div,
-        //         }
-        //     }
+                // division can't be overflown
+
+                self.reg_write(b, div)
+            }
         }
     }
 }
@@ -292,28 +292,23 @@ mod instruction_tests {
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 
-    // #[test]
-    // fn div() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Div(-32767, 32767, Dest::RegA), &mut mem);
-    //     cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
-    //     cpu.execute(Instruction::Div(10, 5, Dest::Memory(0)), &mut mem);
+    #[test]
+    fn div() {
+        let mut cpu = Cpu::vals(-32767, 1, 4);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Div(Reg::A, Reg::B), &mut mem);
 
-    //     assert_eq!(cpu.a, -1);
-    //     assert_eq!(cpu.b, 2);
-    //     assert_eq!(mem.read(0), 2);
-    //     assert_eq!(cpu.flags, 0);
-    // }
+        assert_eq!(cpu.b, -32767);
+        assert_eq!(cpu.flags, 0);
+    }
 
-    // #[test]
-    // fn div_by_0() {
-    //     let mut cpu = Cpu::default();
-    //     let mut mem = Mem::default();
-    //     cpu.execute(Instruction::Div(-32767, 0, Dest::RegA), &mut mem);
-    //     cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
+    #[test]
+    fn div_by_0() {
+        let mut cpu = Cpu::vals(0, -32767, 0);
+        let mut mem = Mem::default();
+        cpu.execute(Instruction::Div(Reg::B, Reg::A), &mut mem);
 
-    //     assert_eq!(cpu.a, 0);
-    //     assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
-    // }
+        assert_eq!(cpu.a, 0);
+        assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
+    }
 }
