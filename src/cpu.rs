@@ -102,7 +102,7 @@ impl Cpu {
                 }
 
                 match dest {
-                    Dest::Memory(_) => todo!(),
+                    Dest::Memory(i) => mem.write(i.into(), sub),
                     Dest::RegA => self.a = sub,
                     Dest::RegB => self.b = sub,
                     Dest::RegC => self.c = sub,
@@ -225,9 +225,11 @@ mod instruction_tests {
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sub(3000, 3100, Dest::RegA), &mut mem);
         cpu.execute(Instruction::Sub(3000, -3100, Dest::RegB), &mut mem);
+        cpu.execute(Instruction::Sub(1, 2, Dest::Memory(0)), &mut mem);
 
         assert_eq!(cpu.a, -100);
         assert_eq!(cpu.b, 6100);
+        assert_eq!(mem.read(0), -1);
         assert_eq!(cpu.flags, 0);
     }
 
