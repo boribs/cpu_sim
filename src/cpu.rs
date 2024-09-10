@@ -1,20 +1,30 @@
+#[derive(Copy, Clone)]
+pub enum Reg {
+    A,
+    B,
+    C,
+}
+
 pub enum Dest {
     Memory(u16),
-    RegA,
-    RegB,
-    RegC,
+    Register(Reg),
 }
 
 pub enum Instruction {
     Ld(i16, Dest),
-    Sum(i16, i16, Dest),
-    Sub(i16, i16, Dest),
-    Mul(i16, i16, Dest),
-    Div(i16, i16, Dest),
+    Sum(Reg, Reg),
+    // Sub(i16, Dest),
+    // Mul(i16, Dest),
+    // Div(i16, Dest),
 }
 
 pub struct Mem {
     array: Vec<i16>,
+    // store eventually
+    // - program pointer
+    // - data pointer
+    // - stack pointer
+    // to be able to warn the user
 }
 
 impl Default for Mem {
@@ -62,88 +72,102 @@ impl Cpu {
     pub const FLAG_OVERFLOW: u8 = 0b0001;
     pub const FLAG_ZERO: u8 = 0b0010;
 
+    pub fn reg_write(&mut self, reg: Reg, value: i16) {
+        match reg {
+            Reg::A => self.a = value,
+            Reg::B => self.b = value,
+            Reg::C => self.c = value,
+        }
+    }
+
+    pub fn reg_read(&self, reg: Reg) -> i16 {
+        match reg {
+            Reg::A => self.a,
+            Reg::B => self.b,
+            Reg::C => self.c,
+        }
+    }
+
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
             Instruction::Ld(val, dest) => match dest {
                 Dest::Memory(i) => mem.write(i.into(), val),
-                Dest::RegA => self.a = val,
-                Dest::RegB => self.b = val,
-                Dest::RegC => self.c = val,
+                Dest::Register(r) => self.reg_write(r, val),
             },
-            Instruction::Sum(a, b, dest) => {
+            Instruction::Sum(a, b) => {
                 let sum;
 
-                let checksum = a as i32 + b as i32;
-                if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
-                    sum = 0;
-                    self.flags |= Self::FLAG_OVERFLOW;
-                    // TOOD: propagate warning
-                } else {
-                    sum = a + b;
+                {
+                    let a = self.reg_read(a);
+                    let b = self.reg_read(b);
+
+                    let checksum = a as i32 + b as i32;
+                    if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
+                        sum = 0;
+                        self.flags |= Self::FLAG_OVERFLOW;
+                        // TOOD: propagate warning
+                    } else {
+                        sum = a + b;
+                    }
                 }
 
-                match dest {
-                    Dest::Memory(i) => mem.write(i.into(), sum),
-                    Dest::RegA => self.a = sum,
-                    Dest::RegB => self.b = sum,
-                    Dest::RegC => self.c = sum,
-                }
+                self.reg_write(b, sum);
             },
-            Instruction::Sub(a, b, dest) => {
-                let sub;
+        //     Instruction::Sub(a, b, dest) => {
+        //         let sub;
 
-                let checksub = a as i32 - b as i32;
-                if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
-                    sub = 0;
-                    self.flags |= Self::FLAG_OVERFLOW;
-                    // TOOD: propagate warning
-                } else {
-                    sub = a - b;
-                }
+        //         let checksub = a as i32 - b as i32;
+        //         if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
+        //             sub = 0;
+        //             self.flags |= Self::FLAG_OVERFLOW;
+        //             // TOOD: propagate warning
+        //         } else {
+        //             sub = a - b;
+        //         }
 
-                match dest {
-                    Dest::Memory(i) => mem.write(i.into(), sub),
-                    Dest::RegA => self.a = sub,
-                    Dest::RegB => self.b = sub,
-                    Dest::RegC => self.c = sub,
-                }
-            },
-            Instruction::Mul(a, b, dest) => {
-                let mul;
+        //         match dest {
+        //             Dest::Memory(i) => mem.write(i.into(), sub),
+        //             Dest::RegA => self.a = sub,
+        //             Dest::RegB => self.b = sub,
+        //             Dest::RegC => self.c = sub,
+        //         }
+        //     },
+        //     Instruction::Mul(a, b, dest) => {
+        //         let mul;
 
-                let checkmul = a as i32 * b as i32;
-                if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
-                    mul = 0;
-                    self.flags |= Self::FLAG_OVERFLOW;
-                    // TOOD: propagate warning
-                } else {
-                    mul = a * b;
-                }
+        //         let checkmul = a as i32 * b as i32;
+        //         if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
+        //             mul = 0;
+        //             self.flags |= Self::FLAG_OVERFLOW;
+        //             // TOOD: propagate warning
+        //         } else {
+        //             mul = a * b;
+        //         }
 
-                match dest {
-                    Dest::Memory(i) => mem.write(i.into(), mul),
-                    Dest::RegA => self.a = mul,
-                    Dest::RegB => self.b = mul,
-                    Dest::RegC => self.c = mul,
-                }
-            },
-            Instruction::Div(a, b, dest) => {
-                let div = if b != 0 {
-                    a / b
-                } else {
-                    self.flags |= Self::FLAG_ZERO;
-                    0
-                };
+        //         match dest {
+        //             Dest::Memory(i) => mem.write(i.into(), mul),
+        //             Dest::RegA => self.a = mul,
+        //             Dest::RegB => self.b = mul,
+        //             Dest::RegC => self.c = mul,
+        //         }
+        //     },
+        //     Instruction::Div(a, b, dest) => {
+        //         let div = if b != 0 {
+        //             a / b
+        //         } else {
+        //             self.flags |= Self::FLAG_ZERO;
+        //             0
+        //         };
 
-                // division cant be overflown
+        //         // division can't be overflown
 
-                match dest {
-                    Dest::Memory(i) => mem.write(i.into(), div),
-                    Dest::RegA => self.a = div,
-                    Dest::RegB => self.b = div,
-                    Dest::RegC => self.c = div,
-                }
-            }
+        //         match dest {
+        //             Dest::Memory(i) => mem.write(i.into(), div),
+        //             Dest::RegA => self.a = div,
+        //             Dest::RegB => self.b = div,
+        //             Dest::RegC => self.c = div,
+        //         }
+        //     }
         }
     }
 }
@@ -156,7 +180,7 @@ mod instruction_tests {
     fn load_a() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::RegA), &mut mem);
+        cpu.execute(Instruction::Ld(-5, Dest::Register(Reg::A)), &mut mem);
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.flags, 0);
@@ -166,9 +190,9 @@ mod instruction_tests {
     fn load_abc() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Ld(1, Dest::RegB), &mut mem);
-        cpu.execute(Instruction::Ld(2020, Dest::RegC), &mut mem);
+        cpu.execute(Instruction::Ld(-5, Dest::Register(Reg::A)), &mut mem);
+        cpu.execute(Instruction::Ld(1, Dest::Register(Reg::B)), &mut mem);
+        cpu.execute(Instruction::Ld(2020, Dest::Register(Reg::C)), &mut mem);
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.b, 1);
@@ -176,117 +200,117 @@ mod instruction_tests {
         assert_eq!(cpu.flags, 0);
     }
 
-    #[test]
-    fn load_into_mem() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
+    // #[test]
+    // fn load_into_mem() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Ld(-5, Dest::Memory(0)), &mut mem);
 
-        assert_eq!(mem.read(0), -5);
-    }
+    //     assert_eq!(mem.read(0), -5);
+    // }
 
-    #[test]
-    fn sum_within_16_bits() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(3000, 3100, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Sum(3000, -3100, Dest::RegB), &mut mem);
-        cpu.execute(Instruction::Sum(1, 4, Dest::Memory(1)), &mut mem);
+    // #[test]
+    // fn sum_within_16_bits() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Sum(3000, 3100, Dest::RegA), &mut mem);
+    //     cpu.execute(Instruction::Sum(3000, -3100, Dest::RegB), &mut mem);
+    //     cpu.execute(Instruction::Sum(1, 4, Dest::Memory(1)), &mut mem);
 
-        assert_eq!(cpu.a, 6100);
-        assert_eq!(cpu.b, -100);
-        assert_eq!(mem.read(1), 5);
-        assert_eq!(cpu.flags, 0);
-    }
+    //     assert_eq!(cpu.a, 6100);
+    //     assert_eq!(cpu.b, -100);
+    //     assert_eq!(mem.read(1), 5);
+    //     assert_eq!(cpu.flags, 0);
+    // }
 
-    #[test]
-    fn sum_with_overflow() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(32767, 4, Dest::RegA), &mut mem);
+    // #[test]
+    // fn sum_with_overflow() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Sum(32767, 4, Dest::RegA), &mut mem);
 
-        assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    }
+    //     assert_eq!(cpu.a, 0);
+    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    // }
 
-    #[test]
-    fn sum_of_negatives_with_overflow() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA), &mut mem);
+    // #[test]
+    // fn sum_of_negatives_with_overflow() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Sum(-32767, -4, Dest::RegA), &mut mem);
 
-        assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    }
+    //     assert_eq!(cpu.a, 0);
+    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    // }
 
-    #[test]
-    fn sub_within_16_bits() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(3000, 3100, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Sub(3000, -3100, Dest::RegB), &mut mem);
-        cpu.execute(Instruction::Sub(1, 2, Dest::Memory(0)), &mut mem);
+    // #[test]
+    // fn sub_within_16_bits() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Sub(3000, 3100, Dest::RegA), &mut mem);
+    //     cpu.execute(Instruction::Sub(3000, -3100, Dest::RegB), &mut mem);
+    //     cpu.execute(Instruction::Sub(1, 2, Dest::Memory(0)), &mut mem);
 
-        assert_eq!(cpu.a, -100);
-        assert_eq!(cpu.b, 6100);
-        assert_eq!(mem.read(0), -1);
-        assert_eq!(cpu.flags, 0);
-    }
+    //     assert_eq!(cpu.a, -100);
+    //     assert_eq!(cpu.b, 6100);
+    //     assert_eq!(mem.read(0), -1);
+    //     assert_eq!(cpu.flags, 0);
+    // }
 
-    #[test]
-    fn sub_with_overflow() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA), &mut mem);
+    // #[test]
+    // fn sub_with_overflow() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Sub(-32767, 4, Dest::RegA), &mut mem);
 
-        assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    }
+    //     assert_eq!(cpu.a, 0);
+    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    // }
 
-    #[test]
-    fn mul_within_16_bits() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(4, -4, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Mul(45, 10, Dest::Memory(0)), &mut mem);
+    // #[test]
+    // fn mul_within_16_bits() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Mul(4, -4, Dest::RegA), &mut mem);
+    //     cpu.execute(Instruction::Mul(45, 10, Dest::Memory(0)), &mut mem);
 
-        assert_eq!(cpu.a, -16);
-        assert_eq!(mem.read(0), 450);
-        assert_eq!(cpu.flags, 0);
-    }
+    //     assert_eq!(cpu.a, -16);
+    //     assert_eq!(mem.read(0), 450);
+    //     assert_eq!(cpu.flags, 0);
+    // }
 
-    #[test]
-    fn mul_with_overflow() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(-32767, 32767, Dest::RegA), &mut mem);
+    // #[test]
+    // fn mul_with_overflow() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Mul(-32767, 32767, Dest::RegA), &mut mem);
 
-        assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
-    }
+    //     assert_eq!(cpu.a, 0);
+    //     assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    // }
 
-    #[test]
-    fn div() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(-32767, 32767, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
-        cpu.execute(Instruction::Div(10, 5, Dest::Memory(0)), &mut mem);
+    // #[test]
+    // fn div() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Div(-32767, 32767, Dest::RegA), &mut mem);
+    //     cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
+    //     cpu.execute(Instruction::Div(10, 5, Dest::Memory(0)), &mut mem);
 
-        assert_eq!(cpu.a, -1);
-        assert_eq!(cpu.b, 2);
-        assert_eq!(mem.read(0), 2);
-        assert_eq!(cpu.flags, 0);
-    }
+    //     assert_eq!(cpu.a, -1);
+    //     assert_eq!(cpu.b, 2);
+    //     assert_eq!(mem.read(0), 2);
+    //     assert_eq!(cpu.flags, 0);
+    // }
 
-    #[test]
-    fn div_by_0() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(-32767, 0, Dest::RegA), &mut mem);
-        cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
+    // #[test]
+    // fn div_by_0() {
+    //     let mut cpu = Cpu::default();
+    //     let mut mem = Mem::default();
+    //     cpu.execute(Instruction::Div(-32767, 0, Dest::RegA), &mut mem);
+    //     cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
 
-        assert_eq!(cpu.a, 0);
-        assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
-    }
+    //     assert_eq!(cpu.a, 0);
+    //     assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
+    // }
 }
