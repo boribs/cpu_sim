@@ -138,7 +138,7 @@ impl Cpu {
                 // division cant be overflown
 
                 match dest {
-                    Dest::Memory(_) => todo!(),
+                    Dest::Memory(i) => mem.write(i.into(), div),
                     Dest::RegA => self.a = div,
                     Dest::RegB => self.b = div,
                     Dest::RegC => self.c = div,
@@ -271,9 +271,11 @@ mod instruction_tests {
         let mut mem = Mem::default();
         cpu.execute(Instruction::Div(-32767, 32767, Dest::RegA), &mut mem);
         cpu.execute(Instruction::Div(4, 2, Dest::RegB), &mut mem);
+        cpu.execute(Instruction::Div(10, 5, Dest::Memory(0)), &mut mem);
 
         assert_eq!(cpu.a, -1);
         assert_eq!(cpu.b, 2);
+        assert_eq!(mem.read(0), 2);
         assert_eq!(cpu.flags, 0);
     }
 
