@@ -16,8 +16,14 @@ pub enum Inpt {
     Register(Reg),
 }
 
+pub enum GenerousInpt {
+    Const(i16),
+    Register(Reg),
+    Memory(u16),
+}
+
 pub enum Instruction {
-    Ld(Inpt, Dest),
+    Ld(GenerousInpt, Dest),
     Sum(Reg, Reg),
     Sub(Reg, Reg),
     Mul(Reg, Reg),
@@ -118,8 +124,9 @@ impl Cpu {
         match instr {
             Instruction::Ld(val, dest) => {
                 let val = match val {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
+                    GenerousInpt::Const(c) => c,
+                    GenerousInpt::Register(r) => self.reg_read(r),
+                    GenerousInpt::Memory(i) => mem.read(i.into()),
                 };
 
                 match dest {
@@ -253,7 +260,7 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(
-            Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)),
+            Instruction::Ld(GenerousInpt::Const(-5), Dest::Register(Reg::A)),
             &mut mem,
         );
 
@@ -266,15 +273,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(
-            Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)),
+            Instruction::Ld(GenerousInpt::Const(-5), Dest::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Inpt::Const(1), Dest::Register(Reg::B)),
+            Instruction::Ld(GenerousInpt::Const(1), Dest::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Inpt::Const(2020), Dest::Register(Reg::C)),
+            Instruction::Ld(GenerousInpt::Const(2020), Dest::Register(Reg::C)),
             &mut mem,
         );
 
@@ -288,7 +295,7 @@ mod instruction_tests {
     fn load_into_mem() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Memory(0)), &mut mem);
+        cpu.execute(Instruction::Ld(GenerousInpt::Const(-5), Dest::Memory(0)), &mut mem);
 
         assert_eq!(mem.read(0), -5);
         assert_eq!(cpu.flags, 0);
