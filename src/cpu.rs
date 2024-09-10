@@ -24,6 +24,7 @@ pub enum Instruction {
     Div(Reg, Reg),
     Cmp(Reg, Reg),
     Jmp(Inpt),
+    Jeq(Inpt),
 }
 
 pub struct Mem {
@@ -217,6 +218,16 @@ impl Cpu {
                     Inpt::Const(c) => c,
                     Inpt::Register(r) => self.reg_read(r),
                 } as u16;
+            }
+            Instruction::Jeq(to) => {
+                let to = match to {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                } as u16;
+
+                if self.flags & Self::FLAG_EQUAL == Self::FLAG_EQUAL {
+                    self.ip = to;
+                }
             }
         }
     }
@@ -417,6 +428,30 @@ mod instruction_tests {
         cpu.execute(Instruction::Jmp(Inpt::Const(45)), &mut mem);
         assert_eq!(cpu.ip, 45);
         cpu.execute(Instruction::Jmp(Inpt::Register(Reg::A)), &mut mem);
-        assert_eq!(cpu.ip, 45);
+        assert_eq!(cpu.ip, 0xff);
+    }
+
+    #[test]
+    fn jeq_after_equal_number_comparison() {
+        let mut cpu = Cpu::vals(3, 3, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jeq(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
+        assert_eq!(cpu.ip, 0xab);
+    }
+
+    #[test]
+    fn jeq_doesnt_jmp_if_flag_eq_not_set() {
+        let mut cpu = Cpu::vals(3, 4, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jeq(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
+        assert_eq!(cpu.ip, 0);
     }
 }
