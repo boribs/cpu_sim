@@ -23,6 +23,7 @@ pub enum Instruction {
     Mul(Reg, Reg),
     Div(Reg, Reg),
     Cmp(Reg, Reg),
+    Jmp(Inpt),
 }
 
 pub struct Mem {
@@ -63,6 +64,7 @@ pub struct Cpu {
     c: i16,
     d: i16,
     flags: u8,
+    ip: u16,
 }
 
 impl Default for Cpu {
@@ -73,6 +75,7 @@ impl Default for Cpu {
             c: 0,
             d: 0,
             flags: 0,
+            ip: 0,
         }
     }
 }
@@ -209,6 +212,12 @@ impl Cpu {
                     self.flag_set(Self::FLAG_EQUAL);
                 }
             }
+            Instruction::Jmp(to) => {
+                self.ip = match to {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                } as u16;
+            }
         }
     }
 }
@@ -223,8 +232,7 @@ mod instruction_tests {
                 a,
                 b,
                 c,
-                d: 0,
-                flags: 0,
+                ..Default::default()
             }
         }
     }
@@ -233,7 +241,10 @@ mod instruction_tests {
     fn load_a() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)), &mut mem);
+        cpu.execute(
+            Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)),
+            &mut mem,
+        );
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.flags, 0);
@@ -243,9 +254,18 @@ mod instruction_tests {
     fn load_abc() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)), &mut mem);
-        cpu.execute(Instruction::Ld(Inpt::Const(1), Dest::Register(Reg::B)), &mut mem);
-        cpu.execute(Instruction::Ld(Inpt::Const(2020), Dest::Register(Reg::C)), &mut mem);
+        cpu.execute(
+            Instruction::Ld(Inpt::Const(-5), Dest::Register(Reg::A)),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Ld(Inpt::Const(1), Dest::Register(Reg::B)),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Ld(Inpt::Const(2020), Dest::Register(Reg::C)),
+            &mut mem,
+        );
 
         assert_eq!(cpu.a, -5);
         assert_eq!(cpu.b, 1);
@@ -387,5 +407,16 @@ mod instruction_tests {
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
+    }
+
+    #[test]
+    fn jmp() {
+        let mut cpu = Cpu::vals(0xff, 1, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Jmp(Inpt::Const(45)), &mut mem);
+        assert_eq!(cpu.ip, 45);
+        cpu.execute(Instruction::Jmp(Inpt::Register(Reg::A)), &mut mem);
+        assert_eq!(cpu.ip, 45);
     }
 }

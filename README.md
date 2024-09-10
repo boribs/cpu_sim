@@ -44,11 +44,12 @@ NOTE:
 <!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->
 <!-- | ret         | Pops value from stack and loads it into the instruction register | ret | -->
 <!-- |||| -->
-<!-- | jmp | Inconditional jump | jmp `<dest>` | -->
+| cmp | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
+| jmp | Inconditional jump | jmp `<reg/const>` |
 <!-- | jeq | Jump if equal | jeq `<val>` `<val>` `<dest>` | -->
 <!-- | jne | Jump if not equal | jne `<val>` `<val>` `<dest>` | -->
 <!-- | jgt | Jump if greater than | jgt `<val>` `<val>` `<dest>` | -->
-<!-- | jlt | Jump if less than | jlt `<val>` `<val>` `<dest>` | -->
+<!-- | jlt | Jump if lower than | jlt `<val>` `<val>` `<dest>` | -->
 
 ### Graphics Instructions
 Unimplemented.
@@ -61,5 +62,8 @@ Just like the 8088, this processor has a byte dedicated to storing flags.
 - Overflow   : indicate if theres overflow after some arithmetics
 <!-- - Parity     : indicates whether a given number is odd or even -->
 - Zero       : indicates division by zero
+- Equal      : indicates if last comparison was with equal values
+- Greater than : indicates if in the last comparison, the first value was greater than the other
+- Less than : indicates if in the last comparison, the first value was less than the other
 
 ## Syscalls
