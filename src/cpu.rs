@@ -127,168 +127,198 @@ impl Cpu {
     //     self.flags &= !flag;
     // }
 
+    fn instr_ld(&mut self, val: GenerousInpt, dest: Dest, mem: &mut Mem) {
+        let val = match val {
+            GenerousInpt::Const(c) => c,
+            GenerousInpt::Register(r) => self.reg_read(r),
+            GenerousInpt::Memory(i) => mem.read(i.into()),
+        };
+
+        match dest {
+            Dest::Memory(i) => mem.write(i.into(), val),
+            Dest::Register(r) => self.reg_write(r, val),
+        }
+    }
+
+    fn instr_sum(&mut self, a: Reg, b: Reg) {
+        let sum;
+
+        {
+            let a = self.reg_read(a);
+            let b = self.reg_read(b);
+
+            let checksum = a as i32 + b as i32;
+            if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
+                sum = 0;
+                self.flag_set(Self::FLAG_OVERFLOW);
+                // TOOD: propagate warning
+            } else {
+                sum = a + b;
+            }
+        }
+
+        self.reg_write(b, sum);
+    }
+
+    fn instr_sub(&mut self, a: Reg, b: Reg) {
+        let sub;
+
+        {
+            let a = self.reg_read(a);
+            let b = self.reg_read(b);
+
+            let checksub = a as i32 - b as i32;
+            if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
+                sub = 0;
+                self.flag_set(Self::FLAG_OVERFLOW);
+                // TOOD: propagate warning
+            } else {
+                sub = a - b;
+            }
+        }
+
+        self.reg_write(b, sub);
+    }
+
+    fn instr_mul(&mut self, a: Reg, b: Reg) {
+        let mul;
+
+        {
+            let a = self.reg_read(a);
+            let b = self.reg_read(b);
+
+            let checkmul = a as i32 * b as i32;
+            if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
+                mul = 0;
+                self.flag_set(Self::FLAG_OVERFLOW);
+                // TOOD: propagate warning
+            } else {
+                mul = a * b;
+            }
+        }
+
+        self.reg_write(b, mul);
+    }
+
+    fn instr_div(&mut self, a: Reg, b: Reg) {
+        let div = {
+            let a = self.reg_read(a);
+            let b = self.reg_read(b);
+
+            if b != 0 {
+                a / b
+            } else {
+                self.flag_set(Self::FLAG_ZERO);
+                0
+            }
+        };
+
+        // division can't be overflown
+
+        self.reg_write(b, div)
+    }
+
+    fn instr_and(&mut self, a: Reg, b: Reg) {
+        let and = self.reg_read(a) & self.reg_read(b);
+        self.reg_write(b, and);
+    }
+
+    fn instr_or(&mut self, a: Reg, b: Reg) {
+        let or = self.reg_read(a) | self.reg_read(b);
+        self.reg_write(b, or);
+    }
+
+    fn instr_not(&mut self, a: Reg) {
+        let not = !self.reg_read(a);
+        self.reg_write(a, not);
+    }
+
+    fn instr_xor(&mut self, a: Reg, b: Reg) {
+        let xor = self.reg_read(a) ^ self.reg_read(b);
+        self.reg_write(b, xor);
+    }
+
+    fn instr_cmp(&mut self, a: Reg, b: Reg) {
+        let a = self.reg_read(a);
+        let b = self.reg_read(b);
+
+        if a > b {
+            self.flag_set(Self::FLAG_GREATER_THAN);
+        } else if a < b {
+            self.flag_set(Self::FLAG_LOWER_THAN);
+        } else {
+            self.flag_set(Self::FLAG_EQUAL);
+        }
+    }
+
+    fn instr_jmp(&mut self, to: Inpt) {
+        self.ip = match to {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        } as u16;
+    }
+
+    fn instr_jeq(&mut self, to: Inpt) {
+        let to = match to {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        } as u16;
+
+        if self.flags & Self::FLAG_EQUAL == Self::FLAG_EQUAL {
+            self.ip = to;
+        }
+    }
+
+    fn instr_jne(&mut self, to: Inpt) {
+        let to = match to {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        } as u16;
+
+        if self.flags & Self::FLAG_EQUAL == 0 {
+            self.ip = to;
+        }
+    }
+
+    fn instr_jgt(&mut self, to: Inpt) {
+        let to = match to {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        } as u16;
+
+        if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
+            self.ip = to;
+        }
+    }
+
+    fn instr_jlt(&mut self, to: Inpt) {
+        let to = match to {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        } as u16;
+
+        if self.flags & Self::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN {
+            self.ip = to;
+        }
+    }
+
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
-            Instruction::Ld(val, dest) => {
-                let val = match val {
-                    GenerousInpt::Const(c) => c,
-                    GenerousInpt::Register(r) => self.reg_read(r),
-                    GenerousInpt::Memory(i) => mem.read(i.into()),
-                };
-
-                match dest {
-                    Dest::Memory(i) => mem.write(i.into(), val),
-                    Dest::Register(r) => self.reg_write(r, val),
-                }
-            }
-            Instruction::Sum(a, b) => {
-                let sum;
-
-                {
-                    let a = self.reg_read(a);
-                    let b = self.reg_read(b);
-
-                    let checksum = a as i32 + b as i32;
-                    if checksum > std::i16::MAX as i32 || checksum < std::i16::MIN as i32 {
-                        sum = 0;
-                        self.flag_set(Self::FLAG_OVERFLOW);
-                        // TOOD: propagate warning
-                    } else {
-                        sum = a + b;
-                    }
-                }
-
-                self.reg_write(b, sum);
-            }
-            Instruction::Sub(a, b) => {
-                let sub;
-
-                {
-                    let a = self.reg_read(a);
-                    let b = self.reg_read(b);
-
-                    let checksub = a as i32 - b as i32;
-                    if checksub > std::i16::MAX as i32 || checksub < std::i16::MIN as i32 {
-                        sub = 0;
-                        self.flag_set(Self::FLAG_OVERFLOW);
-                        // TOOD: propagate warning
-                    } else {
-                        sub = a - b;
-                    }
-                }
-
-                self.reg_write(b, sub);
-            }
-            Instruction::Mul(a, b) => {
-                let mul;
-
-                {
-                    let a = self.reg_read(a);
-                    let b = self.reg_read(b);
-
-                    let checkmul = a as i32 * b as i32;
-                    if checkmul > std::i16::MAX as i32 || checkmul < std::i16::MIN as i32 {
-                        mul = 0;
-                        self.flag_set(Self::FLAG_OVERFLOW);
-                        // TOOD: propagate warning
-                    } else {
-                        mul = a * b;
-                    }
-                }
-
-                self.reg_write(b, mul);
-            }
-            Instruction::Div(a, b) => {
-                let div = {
-                    let a = self.reg_read(a);
-                    let b = self.reg_read(b);
-
-                    if b != 0 {
-                        a / b
-                    } else {
-                        self.flag_set(Self::FLAG_ZERO);
-                        0
-                    }
-                };
-
-                // division can't be overflown
-
-                self.reg_write(b, div)
-            }
-            Instruction::And(a, b) => {
-                let and = self.reg_read(a) & self.reg_read(b);
-                self.reg_write(b, and);
-            }
-            Instruction::Or(a, b) => {
-                let or = self.reg_read(a) | self.reg_read(b);
-                self.reg_write(b, or);
-            }
-            Instruction::Not(a) => {
-                let not = !self.reg_read(a);
-                self.reg_write(a, not);
-            }
-            Instruction::Xor(a, b) => {
-                let xor = self.reg_read(a) ^ self.reg_read(b);
-                self.reg_write(b, xor);
-            }
-            Instruction::Cmp(a, b) => {
-                let a = self.reg_read(a);
-                let b = self.reg_read(b);
-
-                if a > b {
-                    self.flag_set(Self::FLAG_GREATER_THAN);
-                } else if a < b {
-                    self.flag_set(Self::FLAG_LOWER_THAN);
-                } else {
-                    self.flag_set(Self::FLAG_EQUAL);
-                }
-            }
-            Instruction::Jmp(to) => {
-                self.ip = match to {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
-                } as u16;
-            }
-            Instruction::Jeq(to) => {
-                let to = match to {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
-                } as u16;
-
-                if self.flags & Self::FLAG_EQUAL == Self::FLAG_EQUAL {
-                    self.ip = to;
-                }
-            }
-            Instruction::Jne(to) => {
-                let to = match to {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
-                } as u16;
-
-                if self.flags & Self::FLAG_EQUAL == 0 {
-                    self.ip = to;
-                }
-            }
-            Instruction::Jgt(to) => {
-                let to = match to {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
-                } as u16;
-
-                if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
-                    self.ip = to;
-                }
-            }
-            Instruction::Jlt(to) => {
-                let to = match to {
-                    Inpt::Const(c) => c,
-                    Inpt::Register(r) => self.reg_read(r),
-                } as u16;
-
-                if self.flags & Self::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN {
-                    self.ip = to;
-                }
-            }
+            Instruction::Ld(val, dest) => self.instr_ld(val, dest, mem),
+            Instruction::Sum(a, b) => self.instr_sum(a, b),
+            Instruction::Sub(a, b) => self.instr_sub(a, b),
+            Instruction::Mul(a, b) => self.instr_mul(a, b),
+            Instruction::Div(a, b) => self.instr_div(a, b),
+            Instruction::And(a, b) => self.instr_and(a, b),
+            Instruction::Or(a, b) => self.instr_or(a, b),
+            Instruction::Not(a) => self.instr_not(a),
+            Instruction::Xor(a, b) => self.instr_xor(a, b),
+            Instruction::Cmp(a, b) => self.instr_cmp(a, b),
+            Instruction::Jmp(to) => self.instr_jmp(to),
+            Instruction::Jeq(to) => self.instr_jeq(to),
+            Instruction::Jne(to) => self.instr_jne(to),
+            Instruction::Jgt(to) => self.instr_jgt(to),
+            Instruction::Jlt(to) => self.instr_jlt(to),
         }
     }
 }
