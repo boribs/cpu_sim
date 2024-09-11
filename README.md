@@ -42,6 +42,7 @@ NOTE:
 | and         | Binary and between a and b, stored into b | and `<reg a>` `<reg b>` |
 | or          | Binary or between a and b, stored into b | or `<reg a>` `<reg b>` |
 | not         | Binary not of a register | not `<reg>` |
+| shr         | Shift bits in b to the right, a times. | rsh `<reg a/const>` `<reg b>` |
 ||||
 | cmp         | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
 | jmp         | Inconditional jump | jmp `<reg/const>` |

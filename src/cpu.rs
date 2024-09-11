@@ -24,14 +24,20 @@ pub enum GenerousInpt {
 
 pub enum Instruction {
     Ld(GenerousInpt, Dest),
+    // integer arithmetic
     Sum(Reg, Reg),
     Sub(Reg, Reg),
     Mul(Reg, Reg),
     Div(Reg, Reg),
+
+    // binary operations
     And(Reg, Reg),
     Or(Reg, Reg),
     Not(Reg),
     Xor(Reg, Reg),
+    Shr(Inpt, Reg),
+
+    // program flow
     Cmp(Reg, Reg),
     Jmp(Inpt),
     Jeq(Inpt),
@@ -238,6 +244,15 @@ impl Cpu {
         self.reg_write(b, xor);
     }
 
+    fn instr_shr(&mut self, sh: Inpt, a: Reg) {
+        let sh = match sh {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        };
+        let val = self.reg_read(a) >> sh;
+        self.reg_write(a, val);
+    }
+
     fn instr_cmp(&mut self, a: Reg, b: Reg) {
         let a = self.reg_read(a);
         let b = self.reg_read(b);
@@ -313,6 +328,7 @@ impl Cpu {
             Instruction::Or(a, b) => self.instr_or(a, b),
             Instruction::Not(a) => self.instr_not(a),
             Instruction::Xor(a, b) => self.instr_xor(a, b),
+            Instruction::Shr(a, b) => self.instr_shr(a, b),
             Instruction::Cmp(a, b) => self.instr_cmp(a, b),
             Instruction::Jmp(to) => self.instr_jmp(to),
             Instruction::Jeq(to) => self.instr_jeq(to),
@@ -654,5 +670,16 @@ mod instruction_tests {
 
         cpu.execute(Instruction::Xor(Reg::A, Reg::B), &mut mem);
         assert_eq!(cpu.b, 0b1001 ^ 0);
+    }
+
+    #[test]
+    fn shr() {
+        let mut cpu = Cpu::vals(0b10, 0xff, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Shr(Inpt::Const(1), Reg::A), &mut mem);
+        cpu.execute(Instruction::Shr(Inpt::Const(10), Reg::B), &mut mem);
+        assert_eq!(cpu.a, 1);
+        assert_eq!(cpu.b, 0);
     }
 }
