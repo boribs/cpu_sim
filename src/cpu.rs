@@ -28,6 +28,7 @@ pub enum Instruction {
     Sub(Reg, Reg),
     Mul(Reg, Reg),
     Div(Reg, Reg),
+    And(Reg, Reg),
     Cmp(Reg, Reg),
     Jmp(Inpt),
     Jeq(Inpt),
@@ -210,6 +211,10 @@ impl Cpu {
                 // division can't be overflown
 
                 self.reg_write(b, div)
+            }
+            Instruction::And(a, b) => {
+                let and = self.reg_read(a) & self.reg_read(b);
+                self.reg_write(b, and);
             }
             Instruction::Cmp(a, b) => {
                 let a = self.reg_read(a);
@@ -568,5 +573,14 @@ mod instruction_tests {
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == 0);
         assert_eq!(cpu.ip, 0);
+    }
+
+    #[test]
+    fn and() {
+        let mut cpu = Cpu::vals(0xffabu16 as i16, 0x00ff, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::And(Reg::A, Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0x00ab);
     }
 }

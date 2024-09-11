@@ -34,22 +34,24 @@ NOTE:
 | instruction | description | syntax |
 | ----------- | ----------- | ------ |
 | ld          | Loads a value into either memory or a register | ld `<const>` `<reg/mem>` |
-| sum         | Adds the values of a and b and stores the result in b. | sum `<reg a>` `<reg b>` |
-| sub         | Subtracts the values of a and b and stores the result b. | sub `<reg a>` `<reg b>`|
-| mul         | Multiplies the values of a and b and stores the result b. | mul `<reg a>` `<reg b>` |
-| div         | Divides the values of a and b and stores the result b. | div `<reg a>` `<reg b>` |
+| sum         | Adds the values of a and b and stores the result in b | sum `<reg a>` `<reg b>` |
+| sub         | Subtracts the values of a and b and stores the result b | sub `<reg a>` `<reg b>`|
+| mul         | Multiplies the values of a and b and stores the result b | mul `<reg a>` `<reg b>` |
+| div         | Divides the values of a and b and stores the result b | div `<reg a>` `<reg b>` |
 ||||
+| and         | Binary and between a and b, stored into b | and `<reg a>` `<reg b>` |
+||||
+| cmp         | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
+| jmp         | Inconditional jump | jmp `<reg/const>` |
+| jeq         | Jump if equal | jeq `<reg/const>` |
+| jne         | Jump if not equal | jne `<reg/const>` |
+| jgt         | Jump if greater than | jgt `<reg/const>` |
+| jlt         | Jump if lower than | jlt `<reg/const>` |
 <!-- | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` | -->
 <!-- | pop         | Pops the last value from the stack and decrements SP | pop `<reg>` | -->
 <!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->
 <!-- | ret         | Pops value from stack and loads it into the instruction register | ret | -->
 <!-- |||| -->
-| cmp | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
-| jmp | Inconditional jump | jmp `<reg/const>` |
-| jeq | Jump if equal | jeq `<reg/const>` |
-| jne | Jump if not equal | jne `<reg/const>` |
-| jgt | Jump if greater than | jgt `<reg/const>` |
-| jlt | Jump if lower than | jlt `<reg/const>` |
 
 ### Graphics Instructions
 Unimplemented.
