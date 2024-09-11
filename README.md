@@ -18,6 +18,8 @@ A 16-bit simulated CPU, inspired by the Intel 8088.
 | C        | General |
 | D        | General |
 | IP       | Instruction Pointer |
+| SP       | Stack Pointer |
+| SS       | Stack Segment |
 
 ## Instruction set
 
@@ -55,7 +57,7 @@ NOTE:
 | jlt         | Jump if lower than | jlt `<reg/const>` |
 ||||
 | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` |
-<!-- | pop         | Pops the last value from the stack and decrements SP | pop `<reg>` | -->
+| pop         | Pops the last value from the stack and decrements SP  | pop `<reg>` |
 <!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->
 <!-- | ret         | Pops value from stack and loads it into the instruction register | ret | -->
 <!-- |||| -->
