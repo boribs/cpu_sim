@@ -33,7 +33,7 @@ NOTE:
 
 | instruction | description | syntax |
 | ----------- | ----------- | ------ |
-| ld          | Loads a value into either memory or a register | ld `<const>` `<reg/mem>` |
+| ld          | Loads a value into either memory or a register | ld `<const/reg/mem>` `<reg/mem>` |
 | sum         | Adds the values of a and b and stores the result in b | sum `<reg a>` `<reg b>` |
 | sub         | Subtracts the values of a and b and stores the result b | sub `<reg a>` `<reg b>`|
 | mul         | Multiplies the values of a and b and stores the result b | mul `<reg a>` `<reg b>` |
@@ -42,7 +42,10 @@ NOTE:
 | and         | Binary and between a and b, stored into b | and `<reg a>` `<reg b>` |
 | or          | Binary or between a and b, stored into b | or `<reg a>` `<reg b>` |
 | not         | Binary not of a register | not `<reg>` |
+| xor         | Binary xor between a and b, stores into b | not `<reg>` |
+||||
 | shr         | Shift bits in b to the right, a times. | rsh `<reg a/const>` `<reg b>` |
+| shl         | Shift bits in b to the left, a times.  | lsh `<reg a/const>` `<reg b>` |
 ||||
 | cmp         | Compares two values and sets respective comparative flags | cmp `<reg a>` `<reg b>` |
 | jmp         | Inconditional jump | jmp `<reg/const>` |

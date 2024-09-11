@@ -36,6 +36,7 @@ pub enum Instruction {
     Not(Reg),
     Xor(Reg, Reg),
     Shr(Inpt, Reg),
+    Shl(Inpt, Reg),
 
     // program flow
     Cmp(Reg, Reg),
@@ -253,6 +254,15 @@ impl Cpu {
         self.reg_write(a, val);
     }
 
+    fn instr_shl(&mut self, sh: Inpt, a: Reg) {
+        let sh = match sh {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        };
+        let val = self.reg_read(a) << sh;
+        self.reg_write(a, val);
+    }
+
     fn instr_cmp(&mut self, a: Reg, b: Reg) {
         let a = self.reg_read(a);
         let b = self.reg_read(b);
@@ -329,6 +339,7 @@ impl Cpu {
             Instruction::Not(a) => self.instr_not(a),
             Instruction::Xor(a, b) => self.instr_xor(a, b),
             Instruction::Shr(a, b) => self.instr_shr(a, b),
+            Instruction::Shl(a, b) => self.instr_shl(a, b),
             Instruction::Cmp(a, b) => self.instr_cmp(a, b),
             Instruction::Jmp(to) => self.instr_jmp(to),
             Instruction::Jeq(to) => self.instr_jeq(to),
@@ -681,5 +692,16 @@ mod instruction_tests {
         cpu.execute(Instruction::Shr(Inpt::Const(10), Reg::B), &mut mem);
         assert_eq!(cpu.a, 1);
         assert_eq!(cpu.b, 0);
+    }
+
+    #[test]
+    fn shl() {
+        let mut cpu = Cpu::vals(0b10, 0xff, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Shl(Inpt::Const(1), Reg::A), &mut mem);
+        cpu.execute(Instruction::Shl(Inpt::Const(10), Reg::B), &mut mem);
+        assert_eq!(cpu.a, 4);
+        assert_eq!(cpu.b, 0xff << 10);
     }
 }
