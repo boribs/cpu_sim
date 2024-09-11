@@ -29,6 +29,7 @@ pub enum Instruction {
     Mul(Reg, Reg),
     Div(Reg, Reg),
     And(Reg, Reg),
+    Or(Reg, Reg),
     Cmp(Reg, Reg),
     Jmp(Inpt),
     Jeq(Inpt),
@@ -215,6 +216,10 @@ impl Cpu {
             Instruction::And(a, b) => {
                 let and = self.reg_read(a) & self.reg_read(b);
                 self.reg_write(b, and);
+            }
+            Instruction::Or(a, b) => {
+                let or = self.reg_read(a) | self.reg_read(b);
+                self.reg_write(b, or);
             }
             Instruction::Cmp(a, b) => {
                 let a = self.reg_read(a);
@@ -582,5 +587,14 @@ mod instruction_tests {
 
         cpu.execute(Instruction::And(Reg::A, Reg::B), &mut mem);
         assert_eq!(cpu.b, 0x00ab);
+    }
+
+    #[test]
+    fn or() {
+        let mut cpu = Cpu::vals(0xff00u16 as i16, 0x00ff, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Or(Reg::A, Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0xffffu16 as i16);
     }
 }
