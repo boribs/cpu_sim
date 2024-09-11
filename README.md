@@ -49,7 +49,7 @@ NOTE:
 | jeq | Jump if equal | jeq `<reg/const>` |
 | jne | Jump if not equal | jne `<reg/const>` |
 | jgt | Jump if greater than | jgt `<reg/const>` |
-<!-- | jlt | Jump if lower than | jlt `<val>` `<val>` `<dest>` | -->
+| jlt | Jump if lower than | jlt `<reg/const>` |
 
 ### Graphics Instructions
 Unimplemented.

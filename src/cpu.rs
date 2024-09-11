@@ -33,6 +33,7 @@ pub enum Instruction {
     Jeq(Inpt),
     Jne(Inpt),
     Jgt(Inpt),
+    Jlt(Inpt),
 }
 
 pub struct Mem {
@@ -255,6 +256,16 @@ impl Cpu {
                 } as u16;
 
                 if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
+                    self.ip = to;
+                }
+            }
+            Instruction::Jlt(to) => {
+                let to = match to {
+                    Inpt::Const(c) => c,
+                    Inpt::Register(r) => self.reg_read(r),
+                } as u16;
+
+                if self.flags & Self::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN {
                     self.ip = to;
                 }
             }
@@ -532,6 +543,30 @@ mod instruction_tests {
         cpu.execute(Instruction::Jgt(Inpt::Const(0xab)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == 0);
+        assert_eq!(cpu.ip, 0);
+    }
+
+    #[test]
+    fn jlt_with_lower_than_flag_set() {
+        let mut cpu = Cpu::vals(4, 7, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jlt(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
+        assert_eq!(cpu.ip, 0xab);
+    }
+
+    #[test]
+    fn jlt_with_greater_than_flag_set() {
+        let mut cpu = Cpu::vals(6, 4, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Jlt(Inpt::Const(0xab)), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == 0);
         assert_eq!(cpu.ip, 0);
     }
 }
