@@ -31,6 +31,7 @@ pub enum Instruction {
     And(Reg, Reg),
     Or(Reg, Reg),
     Not(Reg),
+    Xor(Reg, Reg),
     Cmp(Reg, Reg),
     Jmp(Inpt),
     Jeq(Inpt),
@@ -225,6 +226,10 @@ impl Cpu {
             Instruction::Not(a) => {
                 let not = !self.reg_read(a);
                 self.reg_write(a, not);
+            }
+            Instruction::Xor(a, b) => {
+                let xor = self.reg_read(a) ^ self.reg_read(b);
+                self.reg_write(b, xor);
             }
             Instruction::Cmp(a, b) => {
                 let a = self.reg_read(a);
@@ -610,5 +615,14 @@ mod instruction_tests {
 
         cpu.execute(Instruction::Not(Reg::A), &mut mem);
         assert_eq!(cpu.a, 0x00ff);
+    }
+
+    #[test]
+    fn xor() {
+        let mut cpu = Cpu::vals(0b1001, 0, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Xor(Reg::A, Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0b1001 ^ 0);
     }
 }
