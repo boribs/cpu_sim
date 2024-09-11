@@ -45,14 +45,17 @@ pub enum Instruction {
     Jne(Inpt),
     Jgt(Inpt),
     Jlt(Inpt),
+
+    // stack
+    Push(Inpt),
 }
 
 pub struct Mem {
     array: Vec<i16>,
     // store eventually
-    // - program pointer
-    // - data pointer
-    // - stack pointer
+    // - program start pointer
+    // - data start pointer
+    // - stack start pointer
     // to be able to warn the user
 }
 
@@ -80,12 +83,19 @@ impl Mem {
 }
 
 pub struct Cpu {
+    // general
     a: i16,
     b: i16,
     c: i16,
     d: i16,
     flags: u8,
+    // pointers
     ip: u16,
+    sp: u16,
+    // segments
+    ss: u16,
+    stack_size: u16,
+    // cs: u16,
 }
 
 impl Default for Cpu {
@@ -97,6 +107,9 @@ impl Default for Cpu {
             d: 0,
             flags: 0,
             ip: 0,
+            sp: 0,
+            stack_size: 0,
+            ss: 0,
         }
     }
 }
@@ -327,6 +340,21 @@ impl Cpu {
         }
     }
 
+    fn instr_push(&mut self, val: Inpt, mem: &mut Mem) {
+        let val = match val {
+            Inpt::Const(c) => c,
+            Inpt::Register(r) => self.reg_read(r),
+        };
+
+        if self.sp - self.ss == self.stack_size {
+            self.sp = 0;
+            self.flag_set(Self::FLAG_OVERFLOW);
+        } else {
+            mem.write(self.sp.into(), val);
+            self.sp += 1;
+        }
+    }
+
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
             Instruction::Ld(val, dest) => self.instr_ld(val, dest, mem),
@@ -346,6 +374,7 @@ impl Cpu {
             Instruction::Jne(to) => self.instr_jne(to),
             Instruction::Jgt(to) => self.instr_jgt(to),
             Instruction::Jlt(to) => self.instr_jlt(to),
+            Instruction::Push(val) => self.instr_push(val, mem),
         }
     }
 }
@@ -703,5 +732,35 @@ mod instruction_tests {
         cpu.execute(Instruction::Shl(Inpt::Const(10), Reg::B), &mut mem);
         assert_eq!(cpu.a, 4);
         assert_eq!(cpu.b, 0xff << 10);
+    }
+
+    #[test]
+    fn push() {
+        let mut cpu = Cpu {
+            stack_size: 3,
+            ..Default::default()
+        };
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
+
+        assert_eq!(cpu.sp, 1);
+        assert_eq!(mem.read(0), 45);
+    }
+
+    #[test]
+    fn push_with_overflow() {
+        let mut cpu = Cpu {
+            stack_size: 1,
+            ..Default::default()
+        };
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
+        cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
+
+        assert_eq!(mem.read(0), 45);
+        assert_eq!(cpu.sp, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
 }

@@ -53,7 +53,8 @@ NOTE:
 | jne         | Jump if not equal | jne `<reg/const>` |
 | jgt         | Jump if greater than | jgt `<reg/const>` |
 | jlt         | Jump if lower than | jlt `<reg/const>` |
-<!-- | push        | Pushes a value into the stack and increments the SP | push `<reg/const>` | -->
+||||
+| push        | Pushes a value into the stack and increments the SP | push `<reg/const>` |
 <!-- | pop         | Pops the last value from the stack and decrements SP | pop `<reg>` | -->
 <!-- | call        | Pushes current instruction pointer to the stack and jumps to `tag`. | call `<tag>` | -->
 <!-- | ret         | Pops value from stack and loads it into the instruction register | ret | -->
