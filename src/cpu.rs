@@ -4,7 +4,7 @@
 const MASK_HIGH: i16 = 0xff00u16 as i16;
 const MASK_LOW: i16 = 0x00ff;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Reg {
     A,
     AH,
@@ -20,24 +20,26 @@ pub enum Reg {
     DL,
 }
 
+impl Reg {
+    fn is_16_bit(&self) -> bool {
+        match self {
+            Reg::A | Reg::B | Reg::C | Reg::C => true,
+            _ => false,
+        }
+    }
+
+    fn is_8_bit(&self) -> bool {
+        !self.is_16_bit()
+    }
+}
+
 pub enum Dest {
     Memory(u16),
     Register(Reg),
 }
 
-pub enum Inpt {
-    Const(i16),
-    Register(Reg),
-}
-
-pub enum GenerousInpt {
-    Const(i16),
-    Register(Reg),
-    Memory(u16),
-}
-
 pub enum Instruction {
-    Ld(GenerousInpt, Dest),
+    Ld(Dest, Dest),
     // integer arithmetic
     Sum(Reg, Reg),
     Sub(Reg, Reg),
@@ -192,16 +194,32 @@ impl Cpu {
     //     self.flags &= !flag;
     // }
 
-    fn instr_ld(&mut self, val: GenerousInpt, dest: Dest, mem: &mut Mem) {
-        let val = match val {
-            GenerousInpt::Const(c) => c,
-            GenerousInpt::Register(r) => self.reg_read(r),
-            GenerousInpt::Memory(i) => mem.read_16(i.into()) as i16,
-        };
+    fn instr_ld(&mut self, from: Dest, to: Dest, mem: &mut Mem) {
+        // let val = match val {
+        //     Dest::Register(r) => self.reg_read(r),
+        //     Dest::Memory(i) => mem.read_16(i.into()) as i16,
+        // };
 
-        match dest {
-            Dest::Memory(i) => mem.write_16(i.into(), val),
-            Dest::Register(r) => self.reg_write(r, val),
+        // match dest {
+        //     Dest::Memory(i) => mem.write_16(i.into(), val),
+        //     Dest::Register(r) => self.reg_write(r, val),
+        // }
+
+        match from {
+            Dest::Register(r) => match to {
+                Dest::Register(t) => {
+                    if r.is_16_bit() != r.is_16_bit() {
+                        panic!("Can't move from {:?} to {:?}.", r, t);
+                    }
+                }
+                Dest::Memory(i) => {
+                    if r.is_16_bit() {
+                        mem.write_16(i.into(), self.reg_read(r));
+                    } else {
+                        mem.write(i.into(), self.reg_read(r) as u8);
+                    }
+                }
+            }
         }
     }
 
@@ -460,13 +478,13 @@ mod instruction_tests {
     #[test]
     fn ld_abc_8() {
         let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
+        let mut mem = Mem::set(vec![10, 0]);
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(10), Dest::Register(Reg::AL)),
+            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::AL)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(1), Dest::Register(Reg::AH)),
+            Instruction::Ld(Dest::Memory(1), Dest::Register(Reg::AH)),
             &mut mem,
         );
 
@@ -477,17 +495,17 @@ mod instruction_tests {
     #[test]
     fn ld_abc_16() {
         let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
+        let mut mem = Mem::set(vec![255, 251, 0, 1, 7, 228]);
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(-5), Dest::Register(Reg::A)),
+            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(1), Dest::Register(Reg::B)),
+            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(2020), Dest::Register(Reg::C)),
+            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
             &mut mem,
         );
 
@@ -499,10 +517,10 @@ mod instruction_tests {
 
     #[test]
     fn ld16_into_mem() {
-        let mut cpu = Cpu::default();
-        let mut mem = Mem::default();
+        let mut cpu = Cpu::vals(-5, 0, 0, 0);
+        let mut mem = Mem::set(vec![0, 0]);
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(-5), Dest::Memory(0)),
+            Instruction::Ld(Dest::Register(Reg::A), Dest::Memory(0)),
             &mut mem,
         );
 
