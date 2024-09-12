@@ -52,7 +52,7 @@ pub enum Instruction {
 }
 
 pub struct Mem {
-    array: Vec<i16>,
+    array: Vec<u8>,
     // store eventually
     // - program start pointer
     // - data start pointer
@@ -62,24 +62,38 @@ pub struct Mem {
 
 impl Default for Mem {
     fn default() -> Self {
-        let mut arr = Vec::<i16>::with_capacity(10);
-        for _ in 0..10 {
-            arr.push(0);
-        }
-
-        Mem { array: arr }
+        Mem::new(10)
     }
 }
 
 impl Mem {
-    pub fn read(&self, index: usize) -> i16 {
-        // assert!(index < self.array.capacity());
+    pub fn new(size: usize) -> Self {
+        Mem {
+            array: vec![0; size],
+        }
+    }
+
+    pub fn read(&self, index: usize) -> u8 {
+        assert!(index < self.array.len());
         self.array[index]
     }
 
-    pub fn write(&mut self, index: usize, val: i16) {
-        // assert!(index < self.array.capacity());
+    pub fn read_16(&self, index: usize) -> u16 {
+        ((self.array[index] as u16) << 8) | self.array[index + 1] as u16
+    }
+
+    pub fn write(&mut self, index: usize, val: u8) {
+        assert!(index < self.array.len());
         self.array[index] = val;
+    }
+
+    pub fn write_16(&mut self, index: usize, val: i16) {
+        assert!(index + 1 < self.array.len());
+
+        let hl = val.to_be_bytes();
+        println!("{:?}", hl);
+        self.array[index] = hl[0];
+        self.array[index + 1] = hl[1];
     }
 }
 
@@ -152,11 +166,11 @@ impl Cpu {
         let val = match val {
             GenerousInpt::Const(c) => c,
             GenerousInpt::Register(r) => self.reg_read(r),
-            GenerousInpt::Memory(i) => mem.read(i.into()),
+            GenerousInpt::Memory(i) => mem.read_16(i.into()) as i16,
         };
 
         match dest {
-            Dest::Memory(i) => mem.write(i.into(), val),
+            Dest::Memory(i) => mem.write_16(i.into(), val),
             Dest::Register(r) => self.reg_write(r, val),
         }
     }
@@ -351,8 +365,8 @@ impl Cpu {
             self.sp = 0;
             self.flag_set(Self::FLAG_OVERFLOW);
         } else {
-            mem.write(self.sp.into(), val);
-            self.sp += 1;
+            mem.write_16(self.sp.into(), val);
+            self.sp += 2;
         }
     }
 
@@ -361,9 +375,9 @@ impl Cpu {
             self.sp = 0;
             self.flag_set(Self::FLAG_OVERFLOW);
         } else {
-            let v = mem.read(self.sp.into());
+            let v = mem.read_16(self.sp.into()) as i16;
             self.reg_write(reg, v);
-            self.sp -= 1;
+            self.sp -= 2;
         }
     }
 
@@ -408,7 +422,7 @@ mod instruction_tests {
     }
 
     impl Mem {
-        fn set(v: Vec<i16>) -> Self {
+        fn set(v: Vec<u8>) -> Self {
             Mem { array: v }
         }
     }
@@ -458,7 +472,31 @@ mod instruction_tests {
             &mut mem,
         );
 
-        assert_eq!(mem.read(0), -5);
+        assert_eq!(mem.read(0), 255);
+        assert_eq!(mem.read(1), 251);
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn load_from_mem() {
+        let mut cpu = Cpu::default();
+        let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
+        cpu.execute(
+            Instruction::Ld(GenerousInpt::Memory(0), Dest::Register(Reg::A)),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Ld(GenerousInpt::Memory(2), Dest::Register(Reg::B)),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Ld(GenerousInpt::Memory(4), Dest::Register(Reg::C)),
+            &mut mem,
+        );
+
+        assert_eq!(cpu.a, 2);
+        assert_eq!(cpu.b, 4);
+        assert_eq!(cpu.c, 89);
         assert_eq!(cpu.flags, 0);
     }
 
@@ -756,21 +794,22 @@ mod instruction_tests {
     #[test]
     fn push() {
         let mut cpu = Cpu {
-            stack_size: 3,
+            stack_size: 4,
             ..Default::default()
         };
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
 
-        assert_eq!(cpu.sp, 1);
-        assert_eq!(mem.read(0), 45);
+        assert_eq!(cpu.sp, 2);
+        assert_eq!(mem.read(0), 0);
+        assert_eq!(mem.read(1), 45);
     }
 
     #[test]
     fn push_with_overflow() {
         let mut cpu = Cpu {
-            stack_size: 1,
+            stack_size: 2,
             ..Default::default()
         };
         let mut mem = Mem::default();
@@ -778,7 +817,8 @@ mod instruction_tests {
         cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
         cpu.execute(Instruction::Push(Inpt::Const(45)), &mut mem);
 
-        assert_eq!(mem.read(0), 45);
+        assert_eq!(mem.read(0), 0);
+        assert_eq!(mem.read(1), 45);
         assert_eq!(cpu.sp, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
     }
@@ -787,10 +827,11 @@ mod instruction_tests {
     fn pop() {
         let mut cpu = Cpu {
             ss: 0,
-            sp: 3,
+            sp: 6,
+            stack_size: 8,
             ..Default::default()
         };
-        let mut mem = Mem::set(vec![0, 45, -5, 12]);
+        let mut mem = Mem::set(vec![0, 0, 255, 251, 0, 45, 0, 12]);
 
         cpu.execute(Instruction::Pop(Reg::A), &mut mem);
         cpu.execute(Instruction::Pop(Reg::B), &mut mem);
@@ -798,18 +839,18 @@ mod instruction_tests {
 
         assert_eq!(cpu.sp, 0);
         assert_eq!(cpu.a, 12);
-        assert_eq!(cpu.b, -5);
-        assert_eq!(cpu.c, 45);
+        assert_eq!(cpu.b, 45);
+        assert_eq!(cpu.c, -5);
     }
 
     #[test]
     fn pop_with_overflow() {
         let mut cpu = Cpu {
             ss: 0,
-            sp: 1,
+            sp: 2,
             ..Default::default()
         };
-        let mut mem = Mem::set(vec![0, 45]);
+        let mut mem = Mem::set(vec![0, 0, 0, 45]);
 
         cpu.execute(Instruction::Pop(Reg::A), &mut mem);
         cpu.execute(Instruction::Pop(Reg::C), &mut mem);
