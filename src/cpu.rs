@@ -1,3 +1,9 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
+const MASK_HIGH: i16 = 0xff00u16 as i16;
+const MASK_LOW: i16 = 0x00ff;
+
 #[derive(Copy, Clone)]
 pub enum Reg {
     A,
