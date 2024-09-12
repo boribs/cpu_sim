@@ -107,7 +107,6 @@ impl Mem {
         assert!(index + 1 < self.array.len());
 
         let hl = val.to_be_bytes();
-        println!("{:?}", hl);
         self.array[index] = hl[0];
         self.array[index + 1] = hl[1];
     }
@@ -652,6 +651,16 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+
+        assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
+    }
+
+    #[test]
+    fn compare_16_bit_with_8_bit() {
+        let mut cpu = Cpu::vals(0, 1, 4, 0);
+        let mut mem = Mem::default();
+
+        cpu.execute(Instruction::Cmp(Reg::A, Reg::BL), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
