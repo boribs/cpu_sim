@@ -23,7 +23,7 @@ pub enum Reg {
 impl Reg {
     fn is_16_bit(&self) -> bool {
         match self {
-            Reg::A | Reg::B | Reg::C | Reg::C => true,
+            Reg::A | Reg::B | Reg::C | Reg::D => true,
             _ => false,
         }
     }
