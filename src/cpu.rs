@@ -558,7 +558,7 @@ mod instruction_tests {
 
     #[test]
     fn sum_within_16_bits() {
-        let mut cpu = Cpu::vals(0, -3, 4);
+        let mut cpu = Cpu::vals(0, -3, 4, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
         cpu.execute(Instruction::Sum(Reg::C, Reg::A), &mut mem);
@@ -570,7 +570,7 @@ mod instruction_tests {
 
     #[test]
     fn sum_with_overflow() {
-        let mut cpu = Cpu::vals(32767, 4, 0);
+        let mut cpu = Cpu::vals(32767, 4, 0, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sum(Reg::B, Reg::A), &mut mem);
 
@@ -580,7 +580,7 @@ mod instruction_tests {
 
     #[test]
     fn sum_of_negatives_with_overflow() {
-        let mut cpu = Cpu::vals(-32767, -4, 0);
+        let mut cpu = Cpu::vals(-32767, -4, 0, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
 
@@ -590,7 +590,7 @@ mod instruction_tests {
 
     #[test]
     fn sub_within_16_bits() {
-        let mut cpu = Cpu::vals(3000, -3100, 15);
+        let mut cpu = Cpu::vals(3000, -3100, 15, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
         cpu.execute(Instruction::Sub(Reg::A, Reg::C), &mut mem);
@@ -602,7 +602,7 @@ mod instruction_tests {
 
     #[test]
     fn sub_with_overflow() {
-        let mut cpu = Cpu::vals(-32767, 4, 0);
+        let mut cpu = Cpu::vals(-32767, 4, 0, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
 
@@ -612,7 +612,7 @@ mod instruction_tests {
 
     #[test]
     fn mul_within_16_bits() {
-        let mut cpu = Cpu::vals(4, -5, 10);
+        let mut cpu = Cpu::vals(4, -5, 10, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
         cpu.execute(Instruction::Mul(Reg::A, Reg::C), &mut mem);
@@ -624,7 +624,7 @@ mod instruction_tests {
 
     #[test]
     fn mul_with_overflow() {
-        let mut cpu = Cpu::vals(-32767, 32767, 0);
+        let mut cpu = Cpu::vals(-32767, 32767, 0, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
 
@@ -634,7 +634,7 @@ mod instruction_tests {
 
     #[test]
     fn div() {
-        let mut cpu = Cpu::vals(-32767, 1, 4);
+        let mut cpu = Cpu::vals(-32767, 1, 4, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Div(Reg::A, Reg::B), &mut mem);
 
@@ -644,7 +644,7 @@ mod instruction_tests {
 
     #[test]
     fn div_by_0() {
-        let mut cpu = Cpu::vals(0, -32767, 0);
+        let mut cpu = Cpu::vals(0, -32767, 0, 0);
         let mut mem = Mem::default();
         cpu.execute(Instruction::Div(Reg::B, Reg::A), &mut mem);
 
@@ -654,7 +654,7 @@ mod instruction_tests {
 
     #[test]
     fn compare_equal() {
-        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::C), &mut mem);
@@ -664,7 +664,7 @@ mod instruction_tests {
 
     #[test]
     fn compare_greater_than() {
-        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::B, Reg::C), &mut mem);
@@ -674,7 +674,7 @@ mod instruction_tests {
 
     #[test]
     fn compare_lower_than() {
-        let mut cpu = Cpu::vals(0, 1, 0);
+        let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -684,7 +684,7 @@ mod instruction_tests {
 
     #[test]
     fn jmp() {
-        let mut cpu = Cpu::vals(0xff, 1, 0);
+        let mut cpu = Cpu::vals(0xff, 1, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Jmp(Inpt::Const(45)), &mut mem);
@@ -695,7 +695,7 @@ mod instruction_tests {
 
     #[test]
     fn jeq_after_equal_number_comparison() {
-        let mut cpu = Cpu::vals(3, 3, 0);
+        let mut cpu = Cpu::vals(3, 3, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -707,7 +707,7 @@ mod instruction_tests {
 
     #[test]
     fn jeq_doesnt_jmp_if_flag_eq_not_set() {
-        let mut cpu = Cpu::vals(3, 4, 0);
+        let mut cpu = Cpu::vals(3, 4, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -719,7 +719,7 @@ mod instruction_tests {
 
     #[test]
     fn jne_after_not_equal_number_comparison() {
-        let mut cpu = Cpu::vals(3, -3, 0);
+        let mut cpu = Cpu::vals(3, -3, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -731,7 +731,7 @@ mod instruction_tests {
 
     #[test]
     fn jne_doesnt_jmp_if_flag_eq_set() {
-        let mut cpu = Cpu::vals(4, 4, 0);
+        let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -743,7 +743,7 @@ mod instruction_tests {
 
     #[test]
     fn jgt_with_greater_than_flag_set() {
-        let mut cpu = Cpu::vals(4, 7, 0);
+        let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::B, Reg::A), &mut mem);
@@ -755,7 +755,7 @@ mod instruction_tests {
 
     #[test]
     fn jgt_without_greater_than_flag_set() {
-        let mut cpu = Cpu::vals(4, 4, 0);
+        let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -767,7 +767,7 @@ mod instruction_tests {
 
     #[test]
     fn jlt_with_lower_than_flag_set() {
-        let mut cpu = Cpu::vals(4, 7, 0);
+        let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -779,7 +779,7 @@ mod instruction_tests {
 
     #[test]
     fn jlt_with_greater_than_flag_set() {
-        let mut cpu = Cpu::vals(6, 4, 0);
+        let mut cpu = Cpu::vals(6, 4, 0xab, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
@@ -791,7 +791,7 @@ mod instruction_tests {
 
     #[test]
     fn and() {
-        let mut cpu = Cpu::vals(0xffabu16 as i16, 0x00ff, 0);
+        let mut cpu = Cpu::vals(0xffabu16 as i16, 0x00ff, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::And(Reg::A, Reg::B), &mut mem);
@@ -800,7 +800,7 @@ mod instruction_tests {
 
     #[test]
     fn or() {
-        let mut cpu = Cpu::vals(0xff00u16 as i16, 0x00ff, 0);
+        let mut cpu = Cpu::vals(0xff00u16 as i16, 0x00ff, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Or(Reg::A, Reg::B), &mut mem);
@@ -809,7 +809,7 @@ mod instruction_tests {
 
     #[test]
     fn not() {
-        let mut cpu = Cpu::vals(0xff00u16 as i16, 0, 0);
+        let mut cpu = Cpu::vals(0xff00u16 as i16, 0, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Not(Reg::A), &mut mem);
@@ -818,7 +818,7 @@ mod instruction_tests {
 
     #[test]
     fn xor() {
-        let mut cpu = Cpu::vals(0b1001, 0, 0);
+        let mut cpu = Cpu::vals(0b1001, 0, 0, 0);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Xor(Reg::A, Reg::B), &mut mem);
@@ -827,7 +827,7 @@ mod instruction_tests {
 
     #[test]
     fn shr() {
-        let mut cpu = Cpu::vals(0b10, 0xff, 0);
+        let mut cpu = Cpu::vals(0b10, 0xff, 1, 10);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Shr(Inpt::Const(1), Reg::A), &mut mem);
@@ -838,7 +838,7 @@ mod instruction_tests {
 
     #[test]
     fn shl() {
-        let mut cpu = Cpu::vals(0b10, 0xff, 0);
+        let mut cpu = Cpu::vals(0b10, 0xff, 1, 10);
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Shl(Inpt::Const(1), Reg::A), &mut mem);
