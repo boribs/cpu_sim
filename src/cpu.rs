@@ -1,9 +1,17 @@
 #[derive(Copy, Clone)]
 pub enum Reg {
     A,
+    AH,
+    AL,
     B,
+    BH,
+    BL,
     C,
+    CH,
+    CL,
     D,
+    DH,
+    DL,
 }
 
 pub enum Dest {
@@ -138,6 +146,14 @@ impl Cpu {
 
     pub fn reg_write(&mut self, reg: Reg, value: i16) {
         match reg {
+            Reg::AH => self.a = (self.a & MASK_LOW) | (value << 8),
+            Reg::AL => self.a = (self.a & MASK_HIGH) | value,
+            Reg::BH => self.b = (self.b & MASK_LOW) | (value << 8),
+            Reg::BL => self.b = (self.b & MASK_HIGH) | value,
+            Reg::CH => self.c = (self.c & MASK_LOW) | (value << 8),
+            Reg::CL => self.c = (self.c & MASK_HIGH) | value,
+            Reg::DH => self.d = (self.d & MASK_LOW) | (value << 8),
+            Reg::DL => self.d = (self.d & MASK_HIGH) | value,
             Reg::A => self.a = value,
             Reg::B => self.b = value,
             Reg::C => self.c = value,
@@ -147,6 +163,14 @@ impl Cpu {
 
     pub fn reg_read(&self, reg: Reg) -> i16 {
         match reg {
+            Reg::AH => self.a >> 8,
+            Reg::AL => self.a & MASK_LOW,
+            Reg::BH => self.b >> 8,
+            Reg::BL => self.b & MASK_LOW,
+            Reg::CH => self.c >> 8,
+            Reg::CL => self.c & MASK_LOW,
+            Reg::DH => self.d >> 8,
+            Reg::DL => self.d & MASK_LOW,
             Reg::A => self.a,
             Reg::B => self.b,
             Reg::C => self.c,
@@ -428,20 +452,24 @@ mod instruction_tests {
     }
 
     #[test]
-    fn load_a() {
+    fn ld_abc_8() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Const(-5), Dest::Register(Reg::A)),
+            Instruction::Ld(GenerousInpt::Const(10), Dest::Register(Reg::AL)),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Ld(GenerousInpt::Const(1), Dest::Register(Reg::AH)),
             &mut mem,
         );
 
-        assert_eq!(cpu.a, -5);
+        assert_eq!(cpu.a, (1 << 8) | 10);
         assert_eq!(cpu.flags, 0);
     }
 
     #[test]
-    fn load_abc() {
+    fn ld_abc_16() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(
@@ -464,7 +492,7 @@ mod instruction_tests {
     }
 
     #[test]
-    fn load_into_mem() {
+    fn ld16_into_mem() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::default();
         cpu.execute(
@@ -478,7 +506,7 @@ mod instruction_tests {
     }
 
     #[test]
-    fn load_from_mem() {
+    fn ld16_from_mem() {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
         cpu.execute(
