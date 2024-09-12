@@ -195,16 +195,6 @@ impl Cpu {
     // }
 
     fn instr_ld(&mut self, from: Dest, to: Dest, mem: &mut Mem) {
-        // let val = match val {
-        //     Dest::Register(r) => self.reg_read(r),
-        //     Dest::Memory(i) => mem.read_16(i.into()) as i16,
-        // };
-
-        // match dest {
-        //     Dest::Memory(i) => mem.write_16(i.into(), val),
-        //     Dest::Register(r) => self.reg_write(r, val),
-        // }
-
         match from {
             Dest::Register(r) => match to {
                 Dest::Register(t) => {
@@ -218,6 +208,19 @@ impl Cpu {
                     } else {
                         mem.write(i.into(), self.reg_read(r) as u8);
                     }
+                }
+            }
+            Dest::Memory(i) => match to {
+                Dest::Register(t) => {
+                    if t.is_16_bit() {
+                        self.reg_write(t, mem.read_16(i.into()) as i16);
+                    } else {
+                        self.reg_write(t, mem.read(i.into()) as i16);
+                    }
+                }
+                Dest::Memory(p) => {
+                    let val = mem.read(i.into());
+                    mem.write(p.into(), val);
                 }
             }
         }
@@ -459,11 +462,12 @@ mod instruction_tests {
     use super::*;
 
     impl Cpu {
-        fn vals(a: i16, b: i16, c: i16) -> Self {
+        fn vals(a: i16, b: i16, c: i16, d: i16) -> Self {
             Cpu {
                 a,
                 b,
                 c,
+                d,
                 ..Default::default()
             }
         }
@@ -478,7 +482,7 @@ mod instruction_tests {
     #[test]
     fn ld_abc_8() {
         let mut cpu = Cpu::default();
-        let mut mem = Mem::set(vec![10, 0]);
+        let mut mem = Mem::set(vec![10, 1]);
         cpu.execute(
             Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::AL)),
             &mut mem,
@@ -534,15 +538,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Memory(0), Dest::Register(Reg::A)),
+            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Memory(2), Dest::Register(Reg::B)),
+            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(GenerousInpt::Memory(4), Dest::Register(Reg::C)),
+            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
             &mut mem,
         );
 
