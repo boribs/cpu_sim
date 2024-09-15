@@ -3,38 +3,27 @@
 
 use crate::cpu;
 
-const REG_A: u8 = 01;
-const REG_AH: u8 = 02;
-const REG_AL: u8 = 03;
-const REG_B: u8 = 04;
-const REG_BH: u8 = 05;
-const REG_BL: u8 = 06;
-const REG_C: u8 = 07;
-const REG_CH: u8 = 08;
-const REG_CL: u8 = 09;
-const REG_D: u8 = 10;
-const REG_DH: u8 = 11;
-const REG_DL: u8 = 12;
-
-fn reg_match(reg: cpu::Reg) -> u8 {
-    match reg {
-        cpu::Reg::A => REG_A,
-        cpu::Reg::AH => REG_AH,
-        cpu::Reg::AL => REG_AL,
-        cpu::Reg::B => REG_B,
-        cpu::Reg::BH => REG_BH,
-        cpu::Reg::BL => REG_BL,
-        cpu::Reg::C => REG_C,
-        cpu::Reg::CH => REG_CH,
-        cpu::Reg::CL => REG_CL,
-        cpu::Reg::D => REG_D,
-        cpu::Reg::DH => REG_DH,
-        cpu::Reg::DL => REG_DL,
+impl cpu::Reg {
+    pub fn code(&self) -> u8 {
+        match self {
+            cpu::Reg::A => 1,
+            cpu::Reg::AH => 2,
+            cpu::Reg::AL => 3,
+            cpu::Reg::B => 4,
+            cpu::Reg::BH => 5,
+            cpu::Reg::BL => 6,
+            cpu::Reg::C => 7,
+            cpu::Reg::CH => 8,
+            cpu::Reg::CL => 9,
+            cpu::Reg::D => 10,
+            cpu::Reg::DH => 11,
+            cpu::Reg::DL => 12,
+        }
     }
 }
 
 impl cpu::Instruction {
-    pub fn op(&self) -> u8 {
+    pub fn code(&self) -> u8 {
         match self {
             cpu::Instruction::Ld(_, _) => 0x1,
             _ => unimplemented!(),
@@ -53,14 +42,14 @@ impl cpu::Instruction {
 
         match self {
             cpu::Instruction::Ld(a, b) => {
-                instr = self.op() << 3;
+                instr = self.code() << 3;
                 match a {
                     cpu::Dest::Memory(m) => {
                         dest_a = *m;
                         bit_count += 16;
                     }
                     cpu::Dest::Register(r) => {
-                        dest_a = reg_match(*r) as u16;
+                        dest_a = r.code() as u16;
                         bit_count += 8;
                         instr |= A_REG_MASK;
                     }
@@ -83,9 +72,9 @@ impl cpu::Instruction {
                     cpu::Dest::Register(r) => {
                         if bit_count == 16 {
                             // a dest was also a register
-                            dest_a = (dest_a << 8) | (reg_match(*r) as u16);
+                            dest_a = (dest_a << 8) | (r.code() as u16);
                         } else {
-                            dest_b = (reg_match(*r) as u16) << 8;
+                            dest_b = (r.code() as u16) << 8;
                         }
                         bit_count += 8;
                         instr |= B_REG_MASK;
@@ -121,9 +110,9 @@ mod test {
         ];
 
         let expected = [
-            [24, 0b00001011, REG_A, REG_B, 0, 0],
-            [32, 0b00001001, 0, 0x11, REG_B, 0],
-            [32, 0b00001010, REG_B, 0, 0xab, 0],
+            [24, 0b00001011, cpu::Reg::A.code(), cpu::Reg::B.code(), 0, 0],
+            [32, 0b00001001, 0, 0x11, cpu::Reg::B.code(), 0],
+            [32, 0b00001010, cpu::Reg::B.code(), 0, 0xab, 0],
             [40, 0b00001000, 0xff, 0xfb, 0, 0xab],
         ];
 
