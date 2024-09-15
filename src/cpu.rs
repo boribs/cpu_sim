@@ -35,7 +35,7 @@ impl Reg {
 
 #[derive(Debug)]
 pub enum CR { // Constant or Register
-    Memory(u16),
+    Constant(u16),
     Register(Reg),
 }
 
@@ -203,7 +203,7 @@ impl Cpu {
                         panic!("Can't move from {:?} to {:?}.", r, t);
                     }
                 }
-                CR::Memory(i) => {
+                CR::Constant(i) => {
                     if r.is_16_bit() {
                         mem.write_16(i.into(), self.reg_read(r));
                     } else {
@@ -211,7 +211,7 @@ impl Cpu {
                     }
                 }
             },
-            CR::Memory(i) => match to {
+            CR::Constant(i) => match to {
                 CR::Register(t) => {
                     if t.is_16_bit() {
                         self.reg_write(t, mem.read_16(i.into()) as i16);
@@ -219,7 +219,7 @@ impl Cpu {
                         self.reg_write(t, mem.read(i.into()) as i16);
                     }
                 }
-                CR::Memory(p) => {
+                CR::Constant(p) => {
                     let val = mem.read(i.into());
                     mem.write(p.into(), val);
                 }
@@ -459,11 +459,11 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![10, 1]);
         cpu.execute(
-            Instruction::Ld(CR::Memory(0), CR::Register(Reg::AL)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::AL)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(CR::Memory(1), CR::Register(Reg::AH)),
+            Instruction::Ld(CR::Constant(1), CR::Register(Reg::AH)),
             &mut mem,
         );
 
@@ -476,15 +476,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![255, 251, 0, 1, 7, 228]);
         cpu.execute(
-            Instruction::Ld(CR::Memory(0), CR::Register(Reg::A)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(CR::Memory(2), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Constant(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(CR::Memory(4), CR::Register(Reg::C)),
+            Instruction::Ld(CR::Constant(4), CR::Register(Reg::C)),
             &mut mem,
         );
 
@@ -499,7 +499,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(-5, 0, 0, 0);
         let mut mem = Mem::set(vec![0, 0]);
         cpu.execute(
-            Instruction::Ld(CR::Register(Reg::A), CR::Memory(0)),
+            Instruction::Ld(CR::Register(Reg::A), CR::Constant(0)),
             &mut mem,
         );
 
@@ -513,15 +513,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
         cpu.execute(
-            Instruction::Ld(CR::Memory(0), CR::Register(Reg::A)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(CR::Memory(2), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Constant(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(CR::Memory(4), CR::Register(Reg::C)),
+            Instruction::Ld(CR::Constant(4), CR::Register(Reg::C)),
             &mut mem,
         );
 

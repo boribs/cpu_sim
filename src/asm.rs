@@ -61,7 +61,7 @@ impl cpu::Instruction {
         match self {
             cpu::Instruction::Ld(a, b) => {
                 match a {
-                    cpu::CR::Memory(m) => {
+                    cpu::CR::Constant(m) => {
                         dest_a = *m;
                         bit_count += 16;
                     }
@@ -73,7 +73,7 @@ impl cpu::Instruction {
                 }
 
                 match b {
-                    cpu::CR::Memory(m) => {
+                    cpu::CR::Constant(m) => {
                         if bit_count == 16 {
                             // a dest was also a register
                             let b = m.to_be_bytes();
@@ -146,9 +146,9 @@ mod byte_conversion_test {
     fn ld_to_bytes() {
         let instrs = [
             Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)),
-            Instruction::Ld(CR::Memory(0x11), CR::Register(Reg::B)),
-            Instruction::Ld(CR::Register(Reg::B), CR::Memory(0xab)),
-            Instruction::Ld(CR::Memory(0xfffb), CR::Memory(0xab)),
+            Instruction::Ld(CR::Constant(0x11), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Register(Reg::B), CR::Constant(0xab)),
+            Instruction::Ld(CR::Constant(0xfffb), CR::Constant(0xab)),
         ];
 
         let expected = [
