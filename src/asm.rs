@@ -36,6 +36,7 @@ impl cpu::Instruction {
             cpu::Instruction::Xor(_, _) => 9,
             cpu::Instruction::Shr(_, _) => 10,
             cpu::Instruction::Shl(_, _) => 11,
+            cpu::Instruction::Cmp(_, _) => 12,
             other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
@@ -98,7 +99,8 @@ impl cpu::Instruction {
             cpu::Instruction::Or(a, b) |
             cpu::Instruction::Xor(a, b) |
             cpu::Instruction::Shr(a, b) |
-            cpu::Instruction::Shl(a, b)
+            cpu::Instruction::Shl(a, b) |
+            cpu::Instruction::Cmp(a, b)
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 24;
@@ -312,6 +314,23 @@ mod byte_conversion_test {
         let expected = [
             [24, 0b01011011, Reg::A.code(), Reg::B.code(), 0, 0],
             [24, 0b01011011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+        ];
+
+        for i in 0..expected.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
+    }
+
+    #[test]
+    fn cmp_to_bytes() {
+        let instrs = [
+            Instruction::Cmp(Reg::A, Reg::B),
+            Instruction::Cmp(Reg::CH, Reg::AL),
+        ];
+
+        let expected = [
+            [24, 0b01100011, Reg::A.code(), Reg::B.code(), 0, 0],
+            [24, 0b01100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
         ];
 
         for i in 0..expected.len() {
