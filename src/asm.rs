@@ -34,6 +34,7 @@ impl cpu::Instruction {
             cpu::Instruction::Or(_, _) => 7,
             cpu::Instruction::Not(_) => 8,
             cpu::Instruction::Xor(_, _) => 9,
+            cpu::Instruction::Shr(_, _) => 10,
             other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
@@ -94,7 +95,8 @@ impl cpu::Instruction {
             cpu::Instruction::Div(a, b) |
             cpu::Instruction::And(a, b) |
             cpu::Instruction::Or(a, b) |
-            cpu::Instruction::Xor(a, b)
+            cpu::Instruction::Xor(a, b) |
+            cpu::Instruction::Shr(a, b)
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 24;
@@ -274,6 +276,23 @@ mod byte_conversion_test {
         let expected = [
             [24, 0b01001011, Reg::A.code(), Reg::B.code(), 0, 0],
             [24, 0b01001011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+        ];
+
+        for i in 0..expected.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
+    }
+
+    #[test]
+    fn shr_to_bytes() {
+        let instrs = [
+            Instruction::Shr(Reg::A, Reg::B),
+            Instruction::Shr(Reg::CH, Reg::AL),
+        ];
+
+        let expected = [
+            [24, 0b01010011, Reg::A.code(), Reg::B.code(), 0, 0],
+            [24, 0b01010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
         ];
 
         for i in 0..expected.len() {
