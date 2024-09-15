@@ -39,6 +39,7 @@ impl cpu::Instruction {
             cpu::Instruction::Cmp(_, _) => 12,
             cpu::Instruction::Jmp(_) => 13,
             cpu::Instruction::Jeq(_) => 14,
+            cpu::Instruction::Jne(_) => 15,
             other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
@@ -111,7 +112,7 @@ impl cpu::Instruction {
             }
             cpu::Instruction::Not(a) |
             cpu::Instruction::Jmp(a) |
-            cpu::Instruction::Jeq(a)
+            cpu::Instruction::Jeq(a) |
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
@@ -356,6 +357,14 @@ mod byte_conversion_test {
         assert_eq!(
             Instruction::Jeq(Reg::D).to_bytes(),
             [16, 0b01110011, Reg::D.code(), 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn jne_to_bytes() {
+        assert_eq!(
+            Instruction::Jne(Reg::D).to_bytes(),
+            [16, 0b01111011, Reg::D.code(), 0, 0, 0]
         );
     }
 }
