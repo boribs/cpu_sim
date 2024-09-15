@@ -33,11 +33,13 @@ impl Reg {
     }
 }
 
+#[derive(Debug)]
 pub enum Dest {
     Memory(u16),
     Register(Reg),
 }
 
+#[derive(Debug)]
 pub enum Instruction {
     Ld(Dest, Dest),
     // integer arithmetic
@@ -208,7 +210,7 @@ impl Cpu {
                         mem.write(i.into(), self.reg_read(r) as u8);
                     }
                 }
-            }
+            },
             Dest::Memory(i) => match to {
                 Dest::Register(t) => {
                     if t.is_16_bit() {
@@ -221,7 +223,7 @@ impl Cpu {
                     let val = mem.read(i.into());
                     mem.write(p.into(), val);
                 }
-            }
+            },
         }
     }
 
