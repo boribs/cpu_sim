@@ -44,7 +44,7 @@ pub enum Instruction {
     Ld(CR, CR),
     // integer arithmetic
     Sum(CR, Reg),
-    Sub(Reg, Reg),
+    Sub(CR, Reg),
     Mul(Reg, Reg),
     Div(Reg, Reg),
 
@@ -250,11 +250,14 @@ impl Cpu {
         self.reg_write(b, sum);
     }
 
-    fn instr_sub(&mut self, a: Reg, b: Reg) {
+    fn instr_sub(&mut self, a: CR, b: Reg) {
         let sub;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checksub = a as i32 - b as i32;
@@ -570,8 +573,8 @@ mod instruction_tests {
     fn sub_within_16_bits() {
         let mut cpu = Cpu::vals(3000, -3100, 15, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Sub(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::C), &mut mem);
 
         assert_eq!(cpu.b, 6100);
         assert_eq!(cpu.c, 2985);
@@ -582,7 +585,7 @@ mod instruction_tests {
     fn sub_with_overflow() {
         let mut cpu = Cpu::vals(-32767, 4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);

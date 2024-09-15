@@ -99,7 +99,8 @@ impl cpu::Instruction {
                     }
                 }
             }
-            cpu::Instruction::Sum(a, b) => {
+            cpu::Instruction::Sum(a, b)
+            | cpu::Instruction::Sub(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -118,7 +119,6 @@ impl cpu::Instruction {
                 };
 
             }
-            cpu::Instruction::Sub(a, b)
             | cpu::Instruction::Mul(a, b)
             | cpu::Instruction::Div(a, b)
             | cpu::Instruction::And(a, b)
@@ -202,13 +202,13 @@ mod byte_conversion_test {
     #[test]
     fn sub_to_bytes() {
         let instrs = [
-            Instruction::Sub(Reg::A, Reg::B),
-            Instruction::Sub(Reg::CH, Reg::AL),
+            Instruction::Sub(CR::Register(Reg::A), Reg::B),
+            Instruction::Sub(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00011011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00011011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00011001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
