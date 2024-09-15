@@ -43,6 +43,8 @@ impl cpu::Instruction {
             cpu::Instruction::Jgt(_) => 16,
             cpu::Instruction::Jlt(_) => 17,
             cpu::Instruction::Push(_) => 18,
+            cpu::Instruction::Pop(_) => 19,
+            // other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
 
@@ -119,12 +121,13 @@ impl cpu::Instruction {
             cpu::Instruction::Jgt(a) |
             cpu::Instruction::Jlt(a) |
             cpu::Instruction::Push(a) |
+            cpu::Instruction::Pop(a)
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
             }
-            other => unimplemented!("{:?}", other),
+            // other => unimplemented!("{:?}", other),
         }
 
         [
@@ -398,4 +401,11 @@ mod byte_conversion_test {
         );
     }
 
+    #[test]
+    fn pop_to_bytes() {
+        assert_eq!(
+            Instruction::Pop(Reg::C).to_bytes(),
+            [16, 0b10011011, Reg::C.code(), 0, 0, 0]
+        );
+    }
 }
