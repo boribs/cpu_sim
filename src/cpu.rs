@@ -46,7 +46,7 @@ pub enum Instruction {
     Sum(CR, Reg),
     Sub(CR, Reg),
     Mul(CR, Reg),
-    Div(Reg, Reg),
+    Div(CR, Reg),
 
     // binary operations
     And(Reg, Reg),
@@ -296,9 +296,12 @@ impl Cpu {
         self.reg_write(b, mul);
     }
 
-    fn instr_div(&mut self, a: Reg, b: Reg) {
+    fn instr_div(&mut self, a: CR, b: Reg) {
         let div = {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             if b != 0 {
@@ -620,7 +623,7 @@ mod instruction_tests {
     fn div() {
         let mut cpu = Cpu::vals(-32767, 1, 4, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Div(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, -32767);
         assert_eq!(cpu.flags, 0);
@@ -630,7 +633,7 @@ mod instruction_tests {
     fn div_by_0() {
         let mut cpu = Cpu::vals(0, -32767, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Div(CR::Constant(0), Reg::A), &mut mem);
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & Cpu::FLAG_ZERO != 0);

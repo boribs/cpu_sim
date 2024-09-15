@@ -101,7 +101,8 @@ impl cpu::Instruction {
             }
             cpu::Instruction::Sum(a, b)
             | cpu::Instruction::Sub(a, b)
-            | cpu::Instruction::Mul(a, b) => {
+            | cpu::Instruction::Mul(a, b)
+            | cpu::Instruction::Div(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -118,10 +119,8 @@ impl cpu::Instruction {
                         bit_count = 32;
                     }
                 };
-
             }
-            cpu::Instruction::Div(a, b)
-            | cpu::Instruction::And(a, b)
+            cpu::Instruction::And(a, b)
             | cpu::Instruction::Or(a, b)
             | cpu::Instruction::Xor(a, b)
             | cpu::Instruction::Shr(a, b)
@@ -220,12 +219,12 @@ mod byte_conversion_test {
     fn mul_to_bytes() {
         let instrs = [
             Instruction::Mul(CR::Register(Reg::A), Reg::B),
-            Instruction::Mul(CR::Register(Reg::CH), Reg::AL),
+            Instruction::Mul(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00100011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00100001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -236,13 +235,13 @@ mod byte_conversion_test {
     #[test]
     fn div_to_bytes() {
         let instrs = [
-            Instruction::Div(Reg::A, Reg::B),
-            Instruction::Div(Reg::CH, Reg::AL),
+            Instruction::Div(CR::Register(Reg::A), Reg::B),
+            Instruction::Div(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00101011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00101011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00101001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
