@@ -45,7 +45,7 @@ pub enum Instruction {
     // integer arithmetic
     Sum(CR, Reg),
     Sub(CR, Reg),
-    Mul(Reg, Reg),
+    Mul(CR, Reg),
     Div(Reg, Reg),
 
     // binary operations
@@ -273,11 +273,14 @@ impl Cpu {
         self.reg_write(b, sub);
     }
 
-    fn instr_mul(&mut self, a: Reg, b: Reg) {
+    fn instr_mul(&mut self, a: CR, b: Reg) {
         let mul;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checkmul = a as i32 * b as i32;
@@ -595,8 +598,8 @@ mod instruction_tests {
     fn mul_within_16_bits() {
         let mut cpu = Cpu::vals(4, -5, 10, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Mul(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Constant(4), Reg::C), &mut mem);
 
         assert_eq!(cpu.b, -20);
         assert_eq!(cpu.c, 40);
@@ -607,7 +610,7 @@ mod instruction_tests {
     fn mul_with_overflow() {
         let mut cpu = Cpu::vals(-32767, 32767, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);

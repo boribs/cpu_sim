@@ -100,7 +100,8 @@ impl cpu::Instruction {
                 }
             }
             cpu::Instruction::Sum(a, b)
-            | cpu::Instruction::Sub(a, b) => {
+            | cpu::Instruction::Sub(a, b)
+            | cpu::Instruction::Mul(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -119,8 +120,7 @@ impl cpu::Instruction {
                 };
 
             }
-            | cpu::Instruction::Mul(a, b)
-            | cpu::Instruction::Div(a, b)
+            cpu::Instruction::Div(a, b)
             | cpu::Instruction::And(a, b)
             | cpu::Instruction::Or(a, b)
             | cpu::Instruction::Xor(a, b)
@@ -219,8 +219,8 @@ mod byte_conversion_test {
     #[test]
     fn mul_to_bytes() {
         let instrs = [
-            Instruction::Mul(Reg::A, Reg::B),
-            Instruction::Mul(Reg::CH, Reg::AL),
+            Instruction::Mul(CR::Register(Reg::A), Reg::B),
+            Instruction::Mul(CR::Register(Reg::CH), Reg::AL),
         ];
 
         let expected = [
