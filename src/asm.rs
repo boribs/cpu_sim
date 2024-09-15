@@ -61,11 +61,11 @@ impl cpu::Instruction {
         match self {
             cpu::Instruction::Ld(a, b) => {
                 match a {
-                    cpu::Dest::Memory(m) => {
+                    cpu::CR::Memory(m) => {
                         dest_a = *m;
                         bit_count += 16;
                     }
-                    cpu::Dest::Register(r) => {
+                    cpu::CR::Register(r) => {
                         dest_a = r.code() as u16;
                         bit_count += 8;
                         instr |= A_REG_MASK;
@@ -73,7 +73,7 @@ impl cpu::Instruction {
                 }
 
                 match b {
-                    cpu::Dest::Memory(m) => {
+                    cpu::CR::Memory(m) => {
                         if bit_count == 16 {
                             // a dest was also a register
                             let b = m.to_be_bytes();
@@ -86,7 +86,7 @@ impl cpu::Instruction {
 
                         bit_count += 16;
                     }
-                    cpu::Dest::Register(r) => {
+                    cpu::CR::Register(r) => {
                         if bit_count == 16 {
                             // a dest was also a register
                             dest_a = (dest_a << 8) | (r.code() as u16);
@@ -145,10 +145,10 @@ mod byte_conversion_test {
     #[test]
     fn ld_to_bytes() {
         let instrs = [
-            Instruction::Ld(Dest::Register(Reg::A), Dest::Register(Reg::B)),
-            Instruction::Ld(Dest::Memory(0x11), Dest::Register(Reg::B)),
-            Instruction::Ld(Dest::Register(Reg::B), Dest::Memory(0xab)),
-            Instruction::Ld(Dest::Memory(0xfffb), Dest::Memory(0xab)),
+            Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Memory(0x11), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Register(Reg::B), CR::Memory(0xab)),
+            Instruction::Ld(CR::Memory(0xfffb), CR::Memory(0xab)),
         ];
 
         let expected = [

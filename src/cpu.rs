@@ -34,14 +34,14 @@ impl Reg {
 }
 
 #[derive(Debug)]
-pub enum Dest {
+pub enum CR { // Constant or Register
     Memory(u16),
     Register(Reg),
 }
 
 #[derive(Debug)]
 pub enum Instruction {
-    Ld(Dest, Dest),
+    Ld(CR, CR),
     // integer arithmetic
     Sum(Reg, Reg),
     Sub(Reg, Reg),
@@ -195,15 +195,15 @@ impl Cpu {
     //     self.flags &= !flag;
     // }
 
-    fn instr_ld(&mut self, from: Dest, to: Dest, mem: &mut Mem) {
+    fn instr_ld(&mut self, from: CR, to: CR, mem: &mut Mem) {
         match from {
-            Dest::Register(r) => match to {
-                Dest::Register(t) => {
+            CR::Register(r) => match to {
+                CR::Register(t) => {
                     if r.is_16_bit() != r.is_16_bit() {
                         panic!("Can't move from {:?} to {:?}.", r, t);
                     }
                 }
-                Dest::Memory(i) => {
+                CR::Memory(i) => {
                     if r.is_16_bit() {
                         mem.write_16(i.into(), self.reg_read(r));
                     } else {
@@ -211,15 +211,15 @@ impl Cpu {
                     }
                 }
             },
-            Dest::Memory(i) => match to {
-                Dest::Register(t) => {
+            CR::Memory(i) => match to {
+                CR::Register(t) => {
                     if t.is_16_bit() {
                         self.reg_write(t, mem.read_16(i.into()) as i16);
                     } else {
                         self.reg_write(t, mem.read(i.into()) as i16);
                     }
                 }
-                Dest::Memory(p) => {
+                CR::Memory(p) => {
                     let val = mem.read(i.into());
                     mem.write(p.into(), val);
                 }
@@ -459,11 +459,11 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![10, 1]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::AL)),
+            Instruction::Ld(CR::Memory(0), CR::Register(Reg::AL)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(1), Dest::Register(Reg::AH)),
+            Instruction::Ld(CR::Memory(1), CR::Register(Reg::AH)),
             &mut mem,
         );
 
@@ -476,15 +476,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![255, 251, 0, 1, 7, 228]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
+            Instruction::Ld(CR::Memory(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
+            Instruction::Ld(CR::Memory(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
+            Instruction::Ld(CR::Memory(4), CR::Register(Reg::C)),
             &mut mem,
         );
 
@@ -499,7 +499,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(-5, 0, 0, 0);
         let mut mem = Mem::set(vec![0, 0]);
         cpu.execute(
-            Instruction::Ld(Dest::Register(Reg::A), Dest::Memory(0)),
+            Instruction::Ld(CR::Register(Reg::A), CR::Memory(0)),
             &mut mem,
         );
 
@@ -513,15 +513,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
+            Instruction::Ld(CR::Memory(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
+            Instruction::Ld(CR::Memory(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
+            Instruction::Ld(CR::Memory(4), CR::Register(Reg::C)),
             &mut mem,
         );
 
