@@ -98,36 +98,33 @@ impl cpu::Instruction {
                     }
                 }
             }
-            cpu::Instruction::Sum(a, b) |
-            cpu::Instruction::Sub(a, b) |
-            cpu::Instruction::Mul(a, b) |
-            cpu::Instruction::Div(a, b) |
-            cpu::Instruction::And(a, b) |
-            cpu::Instruction::Or(a, b) |
-            cpu::Instruction::Xor(a, b) |
-            cpu::Instruction::Shr(a, b) |
-            cpu::Instruction::Shl(a, b) |
-            cpu::Instruction::Cmp(a, b)
-            => {
+            cpu::Instruction::Sum(a, b)
+            | cpu::Instruction::Sub(a, b)
+            | cpu::Instruction::Mul(a, b)
+            | cpu::Instruction::Div(a, b)
+            | cpu::Instruction::And(a, b)
+            | cpu::Instruction::Or(a, b)
+            | cpu::Instruction::Xor(a, b)
+            | cpu::Instruction::Shr(a, b)
+            | cpu::Instruction::Shl(a, b)
+            | cpu::Instruction::Cmp(a, b) => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 24;
                 dest_a = (a.code() as u16) << 8;
                 dest_a |= b.code() as u16;
             }
-            cpu::Instruction::Not(a) |
-            cpu::Instruction::Jmp(a) |
-            cpu::Instruction::Jeq(a) |
-            cpu::Instruction::Jne(a) |
-            cpu::Instruction::Jgt(a) |
-            cpu::Instruction::Jlt(a) |
-            cpu::Instruction::Push(a) |
-            cpu::Instruction::Pop(a)
-            => {
+            cpu::Instruction::Not(a)
+            | cpu::Instruction::Jmp(a)
+            | cpu::Instruction::Jeq(a)
+            | cpu::Instruction::Jne(a)
+            | cpu::Instruction::Jgt(a)
+            | cpu::Instruction::Jlt(a)
+            | cpu::Instruction::Push(a)
+            | cpu::Instruction::Pop(a) => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
-            }
-            // other => unimplemented!("{:?}", other),
+            } // other => unimplemented!("{:?}", other),
         }
 
         [
@@ -270,10 +267,7 @@ mod byte_conversion_test {
 
     #[test]
     fn not_to_bytes() {
-        let instrs = [
-            Instruction::Not(Reg::A),
-            Instruction::Not(Reg::CH),
-        ];
+        let instrs = [Instruction::Not(Reg::A), Instruction::Not(Reg::CH)];
 
         let expected = [
             [16, 0b01000011, Reg::A.code(), 0, 0, 0],
