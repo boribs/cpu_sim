@@ -28,6 +28,7 @@ impl cpu::Instruction {
             cpu::Instruction::Ld(_, _) => 1,
             cpu::Instruction::Sum(_, _) => 2,
             cpu::Instruction::Sub(_, _) => 3,
+            cpu::Instruction::Mul(_, _) => 4,
             other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
@@ -83,7 +84,8 @@ impl cpu::Instruction {
                 }
             }
             cpu::Instruction::Sum(a, b) |
-            cpu::Instruction::Sub(a, b)
+            cpu::Instruction::Sub(a, b) |
+            cpu::Instruction::Mul(a, b)
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 24;
@@ -156,6 +158,23 @@ mod byte_conversion_test {
         let expected = [
             [24, 0b00011011, Reg::A.code(), Reg::B.code(), 0, 0],
             [24, 0b00011011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+        ];
+
+        for i in 0..expected.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
+    }
+
+    #[test]
+    fn mul_to_bytes() {
+        let instrs = [
+            Instruction::Mul(Reg::A, Reg::B),
+            Instruction::Mul(Reg::CH, Reg::AL),
+        ];
+
+        let expected = [
+            [24, 0b00100011, Reg::A.code(), Reg::B.code(), 0, 0],
+            [24, 0b00100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
         ];
 
         for i in 0..expected.len() {
