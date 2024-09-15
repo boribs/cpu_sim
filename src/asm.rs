@@ -25,14 +25,15 @@ impl cpu::Reg {
 impl cpu::Instruction {
     pub fn code(&self) -> u8 {
         match self {
-            cpu::Instruction::Ld(_, _) => 0x1,
-            _ => unimplemented!(),
+            cpu::Instruction::Ld(_, _) => 1,
+            cpu::Instruction::Sum(_, _) => 2,
+            other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
 
     pub fn to_bytes(&self) -> [u8; 6] {
         let mut bit_count: u8 = 8;
-        let mut instr: u8;
+        let mut instr = self.code() << 3;
         let mut dest_a: u16;
         let mut dest_b: u16 = 0;
 
@@ -42,7 +43,6 @@ impl cpu::Instruction {
 
         match self {
             cpu::Instruction::Ld(a, b) => {
-                instr = self.code() << 3;
                 match a {
                     cpu::Dest::Memory(m) => {
                         dest_a = *m;
@@ -81,7 +81,13 @@ impl cpu::Instruction {
                     }
                 }
             }
-            other => panic!("{:?} not implemented", other),
+            cpu::Instruction::Sum(a, b) => {
+                instr |= A_REG_MASK | B_REG_MASK;
+                bit_count = 24;
+                dest_a = (a.code() as u16) << 8;
+                dest_a |= b.code() as u16;
+            }
+            other => unimplemented!("{:?}", other),
         }
 
         [
@@ -109,14 +115,31 @@ mod byte_conversion_test {
         ];
 
         let expected = [
-            [24, 0b00001011, cpu::Reg::A.code(), cpu::Reg::B.code(), 0, 0],
-            [32, 0b00001001, 0, 0x11, cpu::Reg::B.code(), 0],
-            [32, 0b00001010, cpu::Reg::B.code(), 0, 0xab, 0],
+            [24, 0b00001011, Reg::A.code(), Reg::B.code(), 0, 0],
+            [32, 0b00001001, 0, 0x11, Reg::B.code(), 0],
+            [32, 0b00001010, Reg::B.code(), 0, 0xab, 0],
             [40, 0b00001000, 0xff, 0xfb, 0, 0xab],
         ];
 
         for i in 0..expected.len() {
-            assert_eq!(instrs[i].to_bytes(), expected[i])
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
+    }
+
+    #[test]
+    fn sum_to_bytes() {
+        let instrs = [
+            Instruction::Sum(Reg::A, Reg::B),
+            Instruction::Sum(Reg::CH, Reg::AL),
+        ];
+
+        let expected = [
+            [24, 0b00010011, Reg::A.code(), Reg::B.code(), 0, 0],
+            [24, 0b00010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+        ];
+
+        for i in 0..expected.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
         }
     }
 }
