@@ -41,6 +41,7 @@ impl cpu::Instruction {
             cpu::Instruction::Jeq(_) => 14,
             cpu::Instruction::Jne(_) => 15,
             cpu::Instruction::Jgt(_) => 16,
+            cpu::Instruction::Jlt(_) => 17,
         }
     }
 
@@ -115,6 +116,7 @@ impl cpu::Instruction {
             cpu::Instruction::Jeq(a) |
             cpu::Instruction::Jne(a) |
             cpu::Instruction::Jgt(a) |
+            cpu::Instruction::Jlt(a) |
             => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
@@ -375,6 +377,14 @@ mod byte_conversion_test {
         assert_eq!(
             Instruction::Jgt(Reg::D).to_bytes(),
             [16, 0b10000011, Reg::D.code(), 0, 0, 0]
+        );
+    }
+
+    #[test]
+    fn jlt_to_bytes() {
+        assert_eq!(
+            Instruction::Jlt(Reg::D).to_bytes(),
+            [16, 0b10001011, Reg::D.code(), 0, 0, 0]
         );
     }
 }
