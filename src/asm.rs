@@ -34,6 +34,13 @@ fn reg_match(reg: cpu::Reg) -> u8 {
 }
 
 impl cpu::Instruction {
+    pub fn op(&self) -> u8 {
+        match self {
+            cpu::Instruction::Ld(_, _) => 0x1,
+            _ => unimplemented!(),
+        }
+    }
+
     pub fn to_bytes(&self) -> [u8; 6] {
         let mut bit_count: u8 = 8;
         let mut instr: u8;
@@ -46,7 +53,7 @@ impl cpu::Instruction {
 
         match self {
             cpu::Instruction::Ld(a, b) => {
-                instr = 0x1 << 3;
+                instr = self.op() << 3;
                 match a {
                     cpu::Dest::Memory(m) => {
                         dest_a = *m;
