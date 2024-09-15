@@ -96,8 +96,7 @@ impl cpu::Instruction {
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod byte_conversion_test {
     use crate::cpu::*;
 
     #[test]
