@@ -49,12 +49,13 @@ impl cpu::Instruction {
     }
 
     pub fn to_bytes(&self) -> [u8; 6] {
-        let mut bit_count: u8 = 8;
+        let mut bit_count: u8 = 8; // TODO: Change to byte count?
         let mut instr = self.code() << 3;
         let mut dest_a: u16;
         let mut dest_b: u16 = 0;
 
         // these bits are set if the parameters A/B are registers.
+        // TODO: Call them something else.
         const A_REG_MASK: u8 = 0b00000010;
         const B_REG_MASK: u8 = 0b00000001;
 
@@ -98,8 +99,26 @@ impl cpu::Instruction {
                     }
                 }
             }
-            cpu::Instruction::Sum(a, b)
-            | cpu::Instruction::Sub(a, b)
+            cpu::Instruction::Sum(a, b) => {
+                instr |= B_REG_MASK;
+
+                match a {
+                    cpu::CR::Register(r) => {
+                        instr |= A_REG_MASK;
+                        dest_a = (r.code() as u16) << 8;
+                        dest_a |= b.code() as u16;
+                        bit_count = 24;
+                    }
+                    cpu::CR::Constant(c) => {
+                        let c = c.to_be_bytes();
+                        dest_a = ((c[0] as u16) << 8) | (c[1] as u16);
+                        dest_b = (b.code() as u16) << 8;
+                        bit_count = 32;
+                    }
+                };
+
+            }
+            cpu::Instruction::Sub(a, b)
             | cpu::Instruction::Mul(a, b)
             | cpu::Instruction::Div(a, b)
             | cpu::Instruction::And(a, b)
@@ -166,13 +185,13 @@ mod byte_conversion_test {
     #[test]
     fn sum_to_bytes() {
         let instrs = [
-            Instruction::Sum(Reg::A, Reg::B),
-            Instruction::Sum(Reg::CH, Reg::AL),
+            Instruction::Sum(CR::Register(Reg::A), Reg::B),
+            Instruction::Sum(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00010011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00010001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {

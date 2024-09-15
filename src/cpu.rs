@@ -43,7 +43,7 @@ pub enum CR { // Constant or Register
 pub enum Instruction {
     Ld(CR, CR),
     // integer arithmetic
-    Sum(Reg, Reg),
+    Sum(CR, Reg),
     Sub(Reg, Reg),
     Mul(Reg, Reg),
     Div(Reg, Reg),
@@ -227,11 +227,14 @@ impl Cpu {
         }
     }
 
-    fn instr_sum(&mut self, a: Reg, b: Reg) {
+    fn instr_sum(&mut self, a: CR, b: Reg) {
         let sum;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checksum = a as i32 + b as i32;
@@ -535,8 +538,8 @@ mod instruction_tests {
     fn sum_within_16_bits() {
         let mut cpu = Cpu::vals(0, -3, 4, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Sum(Reg::C, Reg::A), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::C), Reg::A), &mut mem);
 
         assert_eq!(cpu.b, -3);
         assert_eq!(cpu.a, 4);
@@ -547,7 +550,7 @@ mod instruction_tests {
     fn sum_with_overflow() {
         let mut cpu = Cpu::vals(32767, 4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::B), Reg::A), &mut mem);
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
@@ -557,7 +560,7 @@ mod instruction_tests {
     fn sum_of_negatives_with_overflow() {
         let mut cpu = Cpu::vals(-32767, -4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
