@@ -105,7 +105,8 @@ impl cpu::Instruction {
             | cpu::Instruction::Div(a, b)
             | cpu::Instruction::And(a, b)
             | cpu::Instruction::Or(a, b)
-            | cpu::Instruction::Xor(a, b) => {
+            | cpu::Instruction::Xor(a, b)
+            | cpu::Instruction::Shr(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -124,7 +125,6 @@ impl cpu::Instruction {
                 };
             }
 
-            cpu::Instruction::Shr(a, b)
             | cpu::Instruction::Shl(a, b)
             | cpu::Instruction::Cmp(a, b) => {
                 instr |= A_REG_MASK | B_REG_MASK;
@@ -318,13 +318,13 @@ mod byte_conversion_test {
     #[test]
     fn shr_to_bytes() {
         let instrs = [
-            Instruction::Shr(Reg::A, Reg::B),
-            Instruction::Shr(Reg::CH, Reg::AL),
+            Instruction::Shr(CR::Register(Reg::A), Reg::B),
+            Instruction::Shr(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01010011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01010001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {

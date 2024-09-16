@@ -53,7 +53,7 @@ pub enum Instruction {
     Or(CR, Reg),
     Not(Reg),
     Xor(CR, Reg),
-    Shr(Reg, Reg),
+    Shr(CR, Reg),
     Shl(Reg, Reg),
 
     // program flow
@@ -346,8 +346,11 @@ impl Cpu {
         self.reg_write(b, xor);
     }
 
-    fn instr_shr(&mut self, sh: Reg, a: Reg) {
-        let val = self.reg_read(a) >> self.reg_read(sh);
+    fn instr_shr(&mut self, sh: CR, a: Reg) {
+        let val = match sh {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } >> self.reg_read(a);
         self.reg_write(a, val);
     }
 
@@ -840,10 +843,10 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0b10, 0xff, 1, 10);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Shr(Reg::C, Reg::A), &mut mem);
-        cpu.execute(Instruction::Shr(Reg::D, Reg::B), &mut mem);
+        cpu.execute(Instruction::Shr(CR::Register(Reg::C), Reg::A), &mut mem);
+        cpu.execute(Instruction::Shr(CR::Constant(1), Reg::B), &mut mem);
         assert_eq!(cpu.a, 1);
-        assert_eq!(cpu.b, 0);
+        assert_eq!(cpu.b, 0xff >> 1);
     }
 
     #[test]
