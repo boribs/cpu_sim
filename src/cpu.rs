@@ -50,7 +50,7 @@ pub enum Instruction {
 
     // binary operations
     And(CR, Reg),
-    Or(Reg, Reg),
+    Or(CR, Reg),
     Not(Reg),
     Xor(Reg, Reg),
     Shr(Reg, Reg),
@@ -325,8 +325,11 @@ impl Cpu {
         self.reg_write(b, and);
     }
 
-    fn instr_or(&mut self, a: Reg, b: Reg) {
-        let or = self.reg_read(a) | self.reg_read(b);
+    fn instr_or(&mut self, a: CR, b: Reg) {
+        let or = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } | self.reg_read(b);
         self.reg_write(b, or);
     }
 
@@ -803,7 +806,9 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0xff00u16 as i16, 0x00ff, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Or(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Or(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Or(CR::Constant(0x00ff), Reg::A), &mut mem);
+        assert_eq!(cpu.a, 0);
         assert_eq!(cpu.b, 0xffffu16 as i16);
     }
 
