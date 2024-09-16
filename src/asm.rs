@@ -127,7 +127,6 @@ impl cpu::Instruction {
                 };
             }
             cpu::Instruction::Not(a)
-            | cpu::Instruction::Push(a)
             | cpu::Instruction::Pop(a) => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
@@ -138,7 +137,8 @@ impl cpu::Instruction {
             | cpu::Instruction::Jeq(a)
             | cpu::Instruction::Jne(a)
             | cpu::Instruction::Jgt(a)
-            | cpu::Instruction::Jlt(a) => {
+            | cpu::Instruction::Jlt(a)
+            | cpu::Instruction::Push(a) => {
                 match a {
                     cpu::CR::Register(r) => {
                         instr |= A_REG_MASK;
@@ -460,10 +460,19 @@ mod byte_conversion_test {
 
     #[test]
     fn push_to_bytes() {
-        assert_eq!(
-            Instruction::Push(Reg::C).to_bytes(),
-            [16, 0b10010011, Reg::C.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Push(CR::Register(Reg::D)),
+            Instruction::Push(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b10010010, Reg::D.code(), 0, 0, 0],
+            [24, 0b10010000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]

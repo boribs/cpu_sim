@@ -66,7 +66,7 @@ pub enum Instruction {
     Jlt(CR),
 
     // stack
-    Push(Reg),
+    Push(CR),
     Pop(Reg),
 }
 
@@ -430,8 +430,11 @@ impl Cpu {
         }
     }
 
-    fn instr_push(&mut self, val: Reg, mem: &mut Mem) {
-        let val = self.reg_read(val);
+    fn instr_push(&mut self, val: CR, mem: &mut Mem) {
+        let val = match val {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        };
 
         if self.sp - self.ss == self.stack_size {
             self.sp = 0;
@@ -894,7 +897,7 @@ mod instruction_tests {
         };
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
+        cpu.execute(Instruction::Push(CR::Register(Reg::A)), &mut mem);
 
         assert_eq!(cpu.sp, 2);
         assert_eq!(mem.read(0), 0);
@@ -910,8 +913,8 @@ mod instruction_tests {
         };
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
+        cpu.execute(Instruction::Push(CR::Register(Reg::A)), &mut mem);
+        cpu.execute(Instruction::Push(CR::Constant(45)), &mut mem);
 
         assert_eq!(mem.read(0), 0);
         assert_eq!(mem.read(1), 45);
