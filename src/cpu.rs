@@ -60,7 +60,7 @@ pub enum Instruction {
     // program flow
     Cmp(CR, Reg),
     Jmp(CR),
-    Jeq(Reg),
+    Jeq(CR),
     Jne(Reg),
     Jgt(Reg),
     Jlt(Reg),
@@ -386,8 +386,11 @@ impl Cpu {
         } as u16;
     }
 
-    fn instr_jeq(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jeq(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_EQUAL == Self::FLAG_EQUAL {
             self.ip = to;
@@ -718,7 +721,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
-        cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jeq(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
         assert_eq!(cpu.ip, 0xab);
@@ -730,7 +733,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
-        cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jeq(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
         assert_eq!(cpu.ip, 0);
