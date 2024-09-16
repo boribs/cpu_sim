@@ -107,7 +107,8 @@ impl cpu::Instruction {
             | cpu::Instruction::Or(a, b)
             | cpu::Instruction::Xor(a, b)
             | cpu::Instruction::Shr(a, b)
-            | cpu::Instruction::Shl(a, b) => {
+            | cpu::Instruction::Shl(a, b)
+            | cpu::Instruction::Cmp(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -125,13 +126,6 @@ impl cpu::Instruction {
                     }
                 };
             }
-
-            | cpu::Instruction::Cmp(a, b) => {
-                instr |= A_REG_MASK | B_REG_MASK;
-                bit_count = 24;
-                dest_a = (a.code() as u16) << 8;
-                dest_a |= b.code() as u16;
-            }
             cpu::Instruction::Not(a)
             | cpu::Instruction::Jmp(a)
             | cpu::Instruction::Jeq(a)
@@ -146,7 +140,7 @@ impl cpu::Instruction {
             } // other => unimplemented!("{:?}", other),
         }
 
-        [
+            [
             bit_count,
             instr,
             (dest_a >> 8) as u8,
@@ -352,13 +346,13 @@ mod byte_conversion_test {
     #[test]
     fn cmp_to_bytes() {
         let instrs = [
-            Instruction::Cmp(Reg::A, Reg::B),
-            Instruction::Cmp(Reg::CH, Reg::AL),
+            Instruction::Cmp(CR::Register(Reg::A), Reg::B),
+            Instruction::Cmp(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01100011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01100001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {

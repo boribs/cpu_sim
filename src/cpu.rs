@@ -34,7 +34,8 @@ impl Reg {
 }
 
 #[derive(Debug)]
-pub enum CR { // Constant or Register
+// Constant or Register
+pub enum CR {
     Constant(u16),
     Register(Reg),
 }
@@ -57,7 +58,7 @@ pub enum Instruction {
     Shl(CR, Reg),
 
     // program flow
-    Cmp(Reg, Reg),
+    Cmp(CR, Reg),
     Jmp(Reg),
     Jeq(Reg),
     Jne(Reg),
@@ -362,8 +363,11 @@ impl Cpu {
         self.reg_write(a, val);
     }
 
-    fn instr_cmp(&mut self, a: Reg, b: Reg) {
-        let a = self.reg_read(a);
+    fn instr_cmp(&mut self, a: CR, b: Reg) {
+        let a = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        };
         let b = self.reg_read(b);
 
         if a > b {
@@ -659,7 +663,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
     }
@@ -669,7 +673,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::B, Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Constant(1), Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
     }
@@ -679,7 +683,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Constant(0), Reg::B), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
@@ -689,7 +693,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 4, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::BL), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::BL), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
@@ -708,7 +712,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, 3, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
@@ -720,7 +724,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
@@ -732,7 +736,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, -3, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jne(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
@@ -744,7 +748,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jne(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
@@ -756,7 +760,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::B), Reg::A), &mut mem);
         cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
@@ -768,7 +772,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == 0);
@@ -780,7 +784,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
@@ -792,7 +796,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(6, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
         cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == 0);
