@@ -127,7 +127,6 @@ impl cpu::Instruction {
                 };
             }
             cpu::Instruction::Not(a)
-            | cpu::Instruction::Jlt(a)
             | cpu::Instruction::Push(a)
             | cpu::Instruction::Pop(a) => {
                 instr |= A_REG_MASK | B_REG_MASK;
@@ -138,7 +137,8 @@ impl cpu::Instruction {
             cpu::Instruction::Jmp(a)
             | cpu::Instruction::Jeq(a)
             | cpu::Instruction::Jne(a)
-            | cpu::Instruction::Jgt(a) => {
+            | cpu::Instruction::Jgt(a)
+            | cpu::Instruction::Jlt(a) => {
                 match a {
                     cpu::CR::Register(r) => {
                         instr |= A_REG_MASK;
@@ -443,10 +443,19 @@ mod byte_conversion_test {
 
     #[test]
     fn jlt_to_bytes() {
-        assert_eq!(
-            Instruction::Jlt(Reg::D).to_bytes(),
-            [16, 0b10001011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jlt(CR::Register(Reg::D)),
+            Instruction::Jlt(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b10001010, Reg::D.code(), 0, 0, 0],
+            [24, 0b10001000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]

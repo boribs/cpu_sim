@@ -63,7 +63,7 @@ pub enum Instruction {
     Jeq(CR),
     Jne(CR),
     Jgt(CR),
-    Jlt(Reg),
+    Jlt(CR),
 
     // stack
     Push(Reg),
@@ -419,8 +419,11 @@ impl Cpu {
         }
     }
 
-    fn instr_jlt(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jlt(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN {
             self.ip = to;
@@ -799,7 +802,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
-        cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jlt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
         assert_eq!(cpu.ip, 0xab);
@@ -811,7 +814,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
-        cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jlt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == 0);
         assert_eq!(cpu.ip, 0);
