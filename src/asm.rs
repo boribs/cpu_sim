@@ -104,7 +104,8 @@ impl cpu::Instruction {
             | cpu::Instruction::Mul(a, b)
             | cpu::Instruction::Div(a, b)
             | cpu::Instruction::And(a, b)
-            | cpu::Instruction::Or(a, b) => {
+            | cpu::Instruction::Or(a, b)
+            | cpu::Instruction::Xor(a, b) => {
                 instr |= B_REG_MASK;
 
                 match a {
@@ -123,8 +124,7 @@ impl cpu::Instruction {
                 };
             }
 
-            cpu::Instruction::Xor(a, b)
-            | cpu::Instruction::Shr(a, b)
+            cpu::Instruction::Shr(a, b)
             | cpu::Instruction::Shl(a, b)
             | cpu::Instruction::Cmp(a, b) => {
                 instr |= A_REG_MASK | B_REG_MASK;
@@ -301,13 +301,13 @@ mod byte_conversion_test {
     #[test]
     fn xor_to_bytes() {
         let instrs = [
-            Instruction::Xor(Reg::A, Reg::B),
-            Instruction::Xor(Reg::CH, Reg::AL),
+            Instruction::Xor(CR::Register(Reg::A), Reg::B),
+            Instruction::Xor(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01001011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01001011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01001001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
