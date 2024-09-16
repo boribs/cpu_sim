@@ -127,7 +127,6 @@ impl cpu::Instruction {
                 };
             }
             cpu::Instruction::Not(a)
-            | cpu::Instruction::Jmp(a)
             | cpu::Instruction::Jeq(a)
             | cpu::Instruction::Jne(a)
             | cpu::Instruction::Jgt(a)
@@ -138,9 +137,22 @@ impl cpu::Instruction {
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
             } // other => unimplemented!("{:?}", other),
+            cpu::Instruction::Jmp(a) => {
+                match a {
+                    cpu::CR::Register(r) => {
+                        instr |= A_REG_MASK;
+                        bit_count = 16;
+                        dest_a = (r.code() as u16) << 8;
+                    }
+                    cpu::CR::Constant(c) => {
+                        bit_count = 24;
+                        dest_a = *c;
+                    }
+                };
+            }
         }
 
-            [
+        [
             bit_count,
             instr,
             (dest_a >> 8) as u8,
@@ -362,10 +374,19 @@ mod byte_conversion_test {
 
     #[test]
     fn jmp_to_bytes() {
-        assert_eq!(
-            Instruction::Jmp(Reg::D).to_bytes(),
-            [16, 0b01101011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jmp(CR::Register(Reg::D)),
+            Instruction::Jmp(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b01101010, Reg::D.code(), 0, 0, 0],
+            [24, 0b01101000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]

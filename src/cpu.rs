@@ -59,7 +59,7 @@ pub enum Instruction {
 
     // program flow
     Cmp(CR, Reg),
-    Jmp(Reg),
+    Jmp(CR),
     Jeq(Reg),
     Jne(Reg),
     Jgt(Reg),
@@ -379,8 +379,11 @@ impl Cpu {
         }
     }
 
-    fn instr_jmp(&mut self, to: Reg) {
-        self.ip = self.reg_read(to) as u16;
+    fn instr_jmp(&mut self, to: CR) {
+        self.ip = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
     }
 
     fn instr_jeq(&mut self, to: Reg) {
@@ -703,8 +706,10 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0xff, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Jmp(Reg::A), &mut mem);
+        cpu.execute(Instruction::Jmp(CR::Register(Reg::A)), &mut mem);
         assert_eq!(cpu.ip, 0xff);
+        cpu.execute(Instruction::Jmp(CR::Constant(0xab)), &mut mem);
+        assert_eq!(cpu.ip, 0xab);
     }
 
     #[test]
