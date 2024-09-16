@@ -62,7 +62,7 @@ pub enum Instruction {
     Jmp(CR),
     Jeq(CR),
     Jne(CR),
-    Jgt(Reg),
+    Jgt(CR),
     Jlt(Reg),
 
     // stack
@@ -408,8 +408,11 @@ impl Cpu {
         }
     }
 
-    fn instr_jgt(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jgt(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
             self.ip = to;
@@ -772,7 +775,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::B), Reg::A), &mut mem);
-        cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jgt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
         assert_eq!(cpu.ip, 0xab);
@@ -784,7 +787,7 @@ mod instruction_tests {
         let mut mem = Mem::default();
 
         cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
-        cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Jgt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == 0);
         assert_eq!(cpu.ip, 0);
