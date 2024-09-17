@@ -348,11 +348,19 @@ impl Cpu {
     }
 
     fn instr_shr(&mut self, sh: CR, a: Reg) {
-        let val = match sh {
+        let mut val = match sh {
             CR::Register(r) => self.reg_read(r),
             CR::Constant(c) => c as i16,
-        } >> self.reg_read(a);
-        self.reg_write(a, val);
+        } as u16;
+
+        if val > 15 {
+            self.flag_set(Cpu::FLAG_OVERFLOW);
+            self.reg_write(a, 0);
+            return;
+        }
+
+        val = (self.reg_read(a) as u16) >> val;
+        self.reg_write(a, val as i16);
     }
 
     fn instr_shl(&mut self, sh: CR, a: Reg) {
@@ -882,6 +890,10 @@ mod instruction_tests {
         cpu.execute(Instruction::Shr(CR::Constant(1), Reg::B), &mut mem);
         assert_eq!(cpu.a, 1);
         assert_eq!(cpu.b, 0xff >> 1);
+
+        cpu.execute(Instruction::Shr(CR::Constant(17), Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW == Cpu::FLAG_OVERFLOW);
     }
 
     #[test]
@@ -894,6 +906,10 @@ mod instruction_tests {
 
         assert_eq!(cpu.a, 4);
         assert_eq!(cpu.b, 0xff << 1);
+
+        cpu.execute(Instruction::Shl(CR::Constant(17), Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW == Cpu::FLAG_OVERFLOW);
     }
 
     #[test]
