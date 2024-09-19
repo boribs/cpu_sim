@@ -34,38 +34,39 @@ impl Reg {
 }
 
 #[derive(Debug)]
-pub enum Dest {
-    Memory(u16),
+// Constant or Register
+pub enum CR {
+    Constant(u16),
     Register(Reg),
 }
 
 #[derive(Debug)]
 pub enum Instruction {
-    Ld(Dest, Dest),
+    Ld(CR, CR),
     // integer arithmetic
-    Sum(Reg, Reg),
-    Sub(Reg, Reg),
-    Mul(Reg, Reg),
-    Div(Reg, Reg),
+    Sum(CR, Reg),
+    Sub(CR, Reg),
+    Mul(CR, Reg),
+    Div(CR, Reg),
 
     // binary operations
-    And(Reg, Reg),
-    Or(Reg, Reg),
+    And(CR, Reg),
+    Or(CR, Reg),
     Not(Reg),
-    Xor(Reg, Reg),
-    Shr(Reg, Reg),
-    Shl(Reg, Reg),
+    Xor(CR, Reg),
+    Shr(CR, Reg),
+    Shl(CR, Reg),
 
     // program flow
-    Cmp(Reg, Reg),
-    Jmp(Reg),
-    Jeq(Reg),
-    Jne(Reg),
-    Jgt(Reg),
-    Jlt(Reg),
+    Cmp(CR, Reg),
+    Jmp(CR),
+    Jeq(CR),
+    Jne(CR),
+    Jgt(CR),
+    Jlt(CR),
 
     // stack
-    Push(Reg),
+    Push(CR),
     Pop(Reg),
 }
 
@@ -195,15 +196,15 @@ impl Cpu {
     //     self.flags &= !flag;
     // }
 
-    fn instr_ld(&mut self, from: Dest, to: Dest, mem: &mut Mem) {
+    fn instr_ld(&mut self, from: CR, to: CR, mem: &mut Mem) {
         match from {
-            Dest::Register(r) => match to {
-                Dest::Register(t) => {
+            CR::Register(r) => match to {
+                CR::Register(t) => {
                     if r.is_16_bit() != r.is_16_bit() {
                         panic!("Can't move from {:?} to {:?}.", r, t);
                     }
                 }
-                Dest::Memory(i) => {
+                CR::Constant(i) => {
                     if r.is_16_bit() {
                         mem.write_16(i.into(), self.reg_read(r));
                     } else {
@@ -211,15 +212,15 @@ impl Cpu {
                     }
                 }
             },
-            Dest::Memory(i) => match to {
-                Dest::Register(t) => {
+            CR::Constant(i) => match to {
+                CR::Register(t) => {
                     if t.is_16_bit() {
                         self.reg_write(t, mem.read_16(i.into()) as i16);
                     } else {
                         self.reg_write(t, mem.read(i.into()) as i16);
                     }
                 }
-                Dest::Memory(p) => {
+                CR::Constant(p) => {
                     let val = mem.read(i.into());
                     mem.write(p.into(), val);
                 }
@@ -227,11 +228,14 @@ impl Cpu {
         }
     }
 
-    fn instr_sum(&mut self, a: Reg, b: Reg) {
+    fn instr_sum(&mut self, a: CR, b: Reg) {
         let sum;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checksum = a as i32 + b as i32;
@@ -247,11 +251,14 @@ impl Cpu {
         self.reg_write(b, sum);
     }
 
-    fn instr_sub(&mut self, a: Reg, b: Reg) {
+    fn instr_sub(&mut self, a: CR, b: Reg) {
         let sub;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checksub = a as i32 - b as i32;
@@ -267,11 +274,14 @@ impl Cpu {
         self.reg_write(b, sub);
     }
 
-    fn instr_mul(&mut self, a: Reg, b: Reg) {
+    fn instr_mul(&mut self, a: CR, b: Reg) {
         let mul;
 
         {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             let checkmul = a as i32 * b as i32;
@@ -287,9 +297,12 @@ impl Cpu {
         self.reg_write(b, mul);
     }
 
-    fn instr_div(&mut self, a: Reg, b: Reg) {
+    fn instr_div(&mut self, a: CR, b: Reg) {
         let div = {
-            let a = self.reg_read(a);
+            let a = match a {
+                CR::Register(r) => self.reg_read(r),
+                CR::Constant(c) => c as i16,
+            };
             let b = self.reg_read(b);
 
             if b != 0 {
@@ -305,13 +318,19 @@ impl Cpu {
         self.reg_write(b, div)
     }
 
-    fn instr_and(&mut self, a: Reg, b: Reg) {
-        let and = self.reg_read(a) & self.reg_read(b);
+    fn instr_and(&mut self, a: CR, b: Reg) {
+        let and = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } & self.reg_read(b);
         self.reg_write(b, and);
     }
 
-    fn instr_or(&mut self, a: Reg, b: Reg) {
-        let or = self.reg_read(a) | self.reg_read(b);
+    fn instr_or(&mut self, a: CR, b: Reg) {
+        let or = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } | self.reg_read(b);
         self.reg_write(b, or);
     }
 
@@ -320,23 +339,51 @@ impl Cpu {
         self.reg_write(a, not);
     }
 
-    fn instr_xor(&mut self, a: Reg, b: Reg) {
-        let xor = self.reg_read(a) ^ self.reg_read(b);
+    fn instr_xor(&mut self, a: CR, b: Reg) {
+        let xor = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } ^ self.reg_read(b);
         self.reg_write(b, xor);
     }
 
-    fn instr_shr(&mut self, sh: Reg, a: Reg) {
-        let val = self.reg_read(a) >> self.reg_read(sh);
-        self.reg_write(a, val);
+    fn instr_shr(&mut self, sh: CR, a: Reg) {
+        let mut val = match sh {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
+
+        if val > 15 {
+            self.flag_set(Cpu::FLAG_OVERFLOW);
+            self.reg_write(a, 0);
+            return;
+        }
+
+        val = (self.reg_read(a) as u16) >> val;
+        self.reg_write(a, val as i16);
     }
 
-    fn instr_shl(&mut self, sh: Reg, a: Reg) {
-        let val = self.reg_read(a) << self.reg_read(sh);
-        self.reg_write(a, val);
+    fn instr_shl(&mut self, sh: CR, a: Reg) {
+        let mut val = match sh {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
+
+        if val > 15 {
+            self.flag_set(Cpu::FLAG_OVERFLOW);
+            self.reg_write(a, 0);
+            return;
+        }
+
+        val = (self.reg_read(a) as u16) << val;
+        self.reg_write(a, val as i16);
     }
 
-    fn instr_cmp(&mut self, a: Reg, b: Reg) {
-        let a = self.reg_read(a);
+    fn instr_cmp(&mut self, a: CR, b: Reg) {
+        let a = match a {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        };
         let b = self.reg_read(b);
 
         if a > b {
@@ -348,44 +395,62 @@ impl Cpu {
         }
     }
 
-    fn instr_jmp(&mut self, to: Reg) {
-        self.ip = self.reg_read(to) as u16;
+    fn instr_jmp(&mut self, to: CR) {
+        self.ip = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
     }
 
-    fn instr_jeq(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jeq(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_EQUAL == Self::FLAG_EQUAL {
             self.ip = to;
         }
     }
 
-    fn instr_jne(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jne(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_EQUAL == 0 {
             self.ip = to;
         }
     }
 
-    fn instr_jgt(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jgt(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN {
             self.ip = to;
         }
     }
 
-    fn instr_jlt(&mut self, to: Reg) {
-        let to = self.reg_read(to) as u16;
+    fn instr_jlt(&mut self, to: CR) {
+        let to = match to {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        } as u16;
 
         if self.flags & Self::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN {
             self.ip = to;
         }
     }
 
-    fn instr_push(&mut self, val: Reg, mem: &mut Mem) {
-        let val = self.reg_read(val);
+    fn instr_push(&mut self, val: CR, mem: &mut Mem) {
+        let val = match val {
+            CR::Register(r) => self.reg_read(r),
+            CR::Constant(c) => c as i16,
+        };
 
         if self.sp - self.ss == self.stack_size {
             self.sp = 0;
@@ -459,11 +524,11 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![10, 1]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::AL)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::AL)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(1), Dest::Register(Reg::AH)),
+            Instruction::Ld(CR::Constant(1), CR::Register(Reg::AH)),
             &mut mem,
         );
 
@@ -476,15 +541,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![255, 251, 0, 1, 7, 228]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
+            Instruction::Ld(CR::Constant(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
+            Instruction::Ld(CR::Constant(4), CR::Register(Reg::C)),
             &mut mem,
         );
 
@@ -499,7 +564,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(-5, 0, 0, 0);
         let mut mem = Mem::set(vec![0, 0]);
         cpu.execute(
-            Instruction::Ld(Dest::Register(Reg::A), Dest::Memory(0)),
+            Instruction::Ld(CR::Register(Reg::A), CR::Constant(0)),
             &mut mem,
         );
 
@@ -513,15 +578,15 @@ mod instruction_tests {
         let mut cpu = Cpu::default();
         let mut mem = Mem::set(vec![0, 2, 0, 4, 0, 89]);
         cpu.execute(
-            Instruction::Ld(Dest::Memory(0), Dest::Register(Reg::A)),
+            Instruction::Ld(CR::Constant(0), CR::Register(Reg::A)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(2), Dest::Register(Reg::B)),
+            Instruction::Ld(CR::Constant(2), CR::Register(Reg::B)),
             &mut mem,
         );
         cpu.execute(
-            Instruction::Ld(Dest::Memory(4), Dest::Register(Reg::C)),
+            Instruction::Ld(CR::Constant(4), CR::Register(Reg::C)),
             &mut mem,
         );
 
@@ -535,8 +600,8 @@ mod instruction_tests {
     fn sum_within_16_bits() {
         let mut cpu = Cpu::vals(0, -3, 4, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Sum(Reg::C, Reg::A), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::C), Reg::A), &mut mem);
 
         assert_eq!(cpu.b, -3);
         assert_eq!(cpu.a, 4);
@@ -547,7 +612,7 @@ mod instruction_tests {
     fn sum_with_overflow() {
         let mut cpu = Cpu::vals(32767, 4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::B), Reg::A), &mut mem);
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
@@ -562,7 +627,7 @@ mod instruction_tests {
     fn sum_of_negatives_with_overflow() {
         let mut cpu = Cpu::vals(-32767, -4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sum(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sum(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
@@ -572,8 +637,8 @@ mod instruction_tests {
     fn sub_within_16_bits() {
         let mut cpu = Cpu::vals(3000, -3100, 15, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Sub(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::C), &mut mem);
 
         assert_eq!(cpu.b, 6100);
         assert_eq!(cpu.c, 2985);
@@ -584,7 +649,7 @@ mod instruction_tests {
     fn sub_with_overflow() {
         let mut cpu = Cpu::vals(-32767, 4, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Sub(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Sub(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
@@ -599,8 +664,8 @@ mod instruction_tests {
     fn mul_within_16_bits() {
         let mut cpu = Cpu::vals(4, -5, 10, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Mul(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Constant(4), Reg::C), &mut mem);
 
         assert_eq!(cpu.b, -20);
         assert_eq!(cpu.c, 40);
@@ -611,7 +676,7 @@ mod instruction_tests {
     fn mul_with_overflow() {
         let mut cpu = Cpu::vals(-32767, 32767, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Mul(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Mul(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
@@ -626,7 +691,7 @@ mod instruction_tests {
     fn div() {
         let mut cpu = Cpu::vals(-32767, 1, 4, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Div(CR::Register(Reg::A), Reg::B), &mut mem);
 
         assert_eq!(cpu.b, -32767);
         assert_eq!(cpu.flags, 0);
@@ -636,7 +701,7 @@ mod instruction_tests {
     fn div_by_0() {
         let mut cpu = Cpu::vals(0, -32767, 0, 0);
         let mut mem = Mem::default();
-        cpu.execute(Instruction::Div(Reg::B, Reg::A), &mut mem);
+        cpu.execute(Instruction::Div(CR::Constant(0), Reg::A), &mut mem);
 
         assert_eq!(cpu.a, 0);
         assert!(cpu.flags & Cpu::FLAG_ZERO != 0);
@@ -647,7 +712,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
     }
@@ -657,7 +722,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::B, Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Constant(1), Reg::C), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
     }
@@ -667,7 +732,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Constant(0), Reg::B), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
@@ -677,7 +742,7 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0, 1, 4, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::BL), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::BL), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
     }
@@ -687,8 +752,10 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0xff, 1, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Jmp(Reg::A), &mut mem);
+        cpu.execute(Instruction::Jmp(CR::Register(Reg::A)), &mut mem);
         assert_eq!(cpu.ip, 0xff);
+        cpu.execute(Instruction::Jmp(CR::Constant(0xab)), &mut mem);
+        assert_eq!(cpu.ip, 0xab);
     }
 
     #[test]
@@ -696,8 +763,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, 3, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jeq(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
         assert_eq!(cpu.ip, 0xab);
@@ -708,8 +775,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jeq(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jeq(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
         assert_eq!(cpu.ip, 0);
@@ -720,8 +787,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(3, -3, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jne(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jne(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == 0);
         assert_eq!(cpu.ip, 0xab);
@@ -732,8 +799,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jne(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jne(CR::Constant(0xab)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_EQUAL == Cpu::FLAG_EQUAL);
         assert_eq!(cpu.ip, 0);
@@ -744,8 +811,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::B, Reg::A), &mut mem);
-        cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::B), Reg::A), &mut mem);
+        cpu.execute(Instruction::Jgt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == Cpu::FLAG_GREATER_THAN);
         assert_eq!(cpu.ip, 0xab);
@@ -756,8 +823,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jgt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jgt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_GREATER_THAN == 0);
         assert_eq!(cpu.ip, 0);
@@ -768,8 +835,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(4, 7, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jlt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == Cpu::FLAG_LOWER_THAN);
         assert_eq!(cpu.ip, 0xab);
@@ -780,8 +847,8 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(6, 4, 0xab, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Cmp(Reg::A, Reg::B), &mut mem);
-        cpu.execute(Instruction::Jlt(Reg::C), &mut mem);
+        cpu.execute(Instruction::Cmp(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Jlt(CR::Register(Reg::C)), &mut mem);
 
         assert!(cpu.flags & Cpu::FLAG_LOWER_THAN == 0);
         assert_eq!(cpu.ip, 0);
@@ -792,7 +859,9 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0xffabu16 as i16, 0x00ff, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::And(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::And(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::And(CR::Constant(0xff00), Reg::A), &mut mem);
+        assert_eq!(cpu.a, (0xffabu16 & 0xff00u16) as i16);
         assert_eq!(cpu.b, 0x00ab);
     }
 
@@ -801,8 +870,10 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0xff00u16 as i16, 0x00ff, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Or(Reg::A, Reg::B), &mut mem);
-        assert_eq!(cpu.b, 0xffffu16 as i16);
+        cpu.execute(Instruction::Or(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Or(CR::Constant(0x00ff), Reg::A), &mut mem);
+        assert_eq!(cpu.a, 0xffffu16 as i16);
+        assert_eq!(cpu.b, cpu.a);
     }
 
     #[test]
@@ -819,8 +890,10 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0b1001, 0, 0, 0);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Xor(Reg::A, Reg::B), &mut mem);
+        cpu.execute(Instruction::Xor(CR::Register(Reg::A), Reg::B), &mut mem);
+        cpu.execute(Instruction::Xor(CR::Constant(0xab), Reg::C), &mut mem);
         assert_eq!(cpu.b, 0b1001 ^ 0);
+        assert_eq!(cpu.c, 0xab ^ 0);
     }
 
     #[test]
@@ -828,10 +901,14 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0b10, 0xff, 1, 10);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Shr(Reg::C, Reg::A), &mut mem);
-        cpu.execute(Instruction::Shr(Reg::D, Reg::B), &mut mem);
+        cpu.execute(Instruction::Shr(CR::Register(Reg::C), Reg::A), &mut mem);
+        cpu.execute(Instruction::Shr(CR::Constant(1), Reg::B), &mut mem);
         assert_eq!(cpu.a, 1);
+        assert_eq!(cpu.b, 0xff >> 1);
+
+        cpu.execute(Instruction::Shr(CR::Constant(17), Reg::B), &mut mem);
         assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW == Cpu::FLAG_OVERFLOW);
     }
 
     #[test]
@@ -839,11 +916,15 @@ mod instruction_tests {
         let mut cpu = Cpu::vals(0b10, 0xff, 1, 10);
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Shl(Reg::C, Reg::A), &mut mem);
-        cpu.execute(Instruction::Shl(Reg::C, Reg::B), &mut mem);
+        cpu.execute(Instruction::Shl(CR::Register(Reg::C), Reg::A), &mut mem);
+        cpu.execute(Instruction::Shl(CR::Constant(1), Reg::B), &mut mem);
 
         assert_eq!(cpu.a, 4);
         assert_eq!(cpu.b, 0xff << 1);
+
+        cpu.execute(Instruction::Shl(CR::Constant(17), Reg::B), &mut mem);
+        assert_eq!(cpu.b, 0);
+        assert!(cpu.flags & Cpu::FLAG_OVERFLOW == Cpu::FLAG_OVERFLOW);
     }
 
     #[test]
@@ -855,7 +936,7 @@ mod instruction_tests {
         };
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
+        cpu.execute(Instruction::Push(CR::Register(Reg::A)), &mut mem);
 
         assert_eq!(cpu.sp, 2);
         assert_eq!(mem.read(0), 0);
@@ -871,8 +952,8 @@ mod instruction_tests {
         };
         let mut mem = Mem::default();
 
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
-        cpu.execute(Instruction::Push(Reg::A), &mut mem);
+        cpu.execute(Instruction::Push(CR::Register(Reg::A)), &mut mem);
+        cpu.execute(Instruction::Push(CR::Constant(45)), &mut mem);
 
         assert_eq!(mem.read(0), 0);
         assert_eq!(mem.read(1), 45);

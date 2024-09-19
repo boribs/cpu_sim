@@ -49,23 +49,24 @@ impl cpu::Instruction {
     }
 
     pub fn to_bytes(&self) -> [u8; 6] {
-        let mut bit_count: u8 = 8;
+        let mut bit_count: u8 = 8; // TODO: Change to byte count?
         let mut instr = self.code() << 3;
         let mut dest_a: u16;
         let mut dest_b: u16 = 0;
 
         // these bits are set if the parameters A/B are registers.
+        // TODO: Call them something else.
         const A_REG_MASK: u8 = 0b00000010;
         const B_REG_MASK: u8 = 0b00000001;
 
         match self {
             cpu::Instruction::Ld(a, b) => {
                 match a {
-                    cpu::Dest::Memory(m) => {
+                    cpu::CR::Constant(m) => {
                         dest_a = *m;
                         bit_count += 16;
                     }
-                    cpu::Dest::Register(r) => {
+                    cpu::CR::Register(r) => {
                         dest_a = r.code() as u16;
                         bit_count += 8;
                         instr |= A_REG_MASK;
@@ -73,7 +74,7 @@ impl cpu::Instruction {
                 }
 
                 match b {
-                    cpu::Dest::Memory(m) => {
+                    cpu::CR::Constant(m) => {
                         if bit_count == 16 {
                             // a dest was also a register
                             let b = m.to_be_bytes();
@@ -86,7 +87,7 @@ impl cpu::Instruction {
 
                         bit_count += 16;
                     }
-                    cpu::Dest::Register(r) => {
+                    cpu::CR::Register(r) => {
                         if bit_count == 16 {
                             // a dest was also a register
                             dest_a = (dest_a << 8) | (r.code() as u16);
@@ -108,23 +109,48 @@ impl cpu::Instruction {
             | cpu::Instruction::Shr(a, b)
             | cpu::Instruction::Shl(a, b)
             | cpu::Instruction::Cmp(a, b) => {
-                instr |= A_REG_MASK | B_REG_MASK;
-                bit_count = 24;
-                dest_a = (a.code() as u16) << 8;
-                dest_a |= b.code() as u16;
+                instr |= B_REG_MASK;
+
+                match a {
+                    cpu::CR::Register(r) => {
+                        instr |= A_REG_MASK;
+                        dest_a = (r.code() as u16) << 8;
+                        dest_a |= b.code() as u16;
+                        bit_count = 24;
+                    }
+                    cpu::CR::Constant(c) => {
+                        let c = c.to_be_bytes();
+                        dest_a = ((c[0] as u16) << 8) | (c[1] as u16);
+                        dest_b = (b.code() as u16) << 8;
+                        bit_count = 32;
+                    }
+                };
             }
             cpu::Instruction::Not(a)
-            | cpu::Instruction::Jmp(a)
-            | cpu::Instruction::Jeq(a)
-            | cpu::Instruction::Jne(a)
-            | cpu::Instruction::Jgt(a)
-            | cpu::Instruction::Jlt(a)
-            | cpu::Instruction::Push(a)
             | cpu::Instruction::Pop(a) => {
                 instr |= A_REG_MASK | B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
             } // other => unimplemented!("{:?}", other),
+
+            cpu::Instruction::Jmp(a)
+            | cpu::Instruction::Jeq(a)
+            | cpu::Instruction::Jne(a)
+            | cpu::Instruction::Jgt(a)
+            | cpu::Instruction::Jlt(a)
+            | cpu::Instruction::Push(a) => {
+                match a {
+                    cpu::CR::Register(r) => {
+                        instr |= A_REG_MASK;
+                        bit_count = 16;
+                        dest_a = (r.code() as u16) << 8;
+                    }
+                    cpu::CR::Constant(c) => {
+                        bit_count = 24;
+                        dest_a = *c;
+                    }
+                };
+            }
         }
 
         [
@@ -145,10 +171,10 @@ mod byte_conversion_test {
     #[test]
     fn ld_to_bytes() {
         let instrs = [
-            Instruction::Ld(Dest::Register(Reg::A), Dest::Register(Reg::B)),
-            Instruction::Ld(Dest::Memory(0x11), Dest::Register(Reg::B)),
-            Instruction::Ld(Dest::Register(Reg::B), Dest::Memory(0xab)),
-            Instruction::Ld(Dest::Memory(0xfffb), Dest::Memory(0xab)),
+            Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Constant(0x11), CR::Register(Reg::B)),
+            Instruction::Ld(CR::Register(Reg::B), CR::Constant(0xab)),
+            Instruction::Ld(CR::Constant(0xfffb), CR::Constant(0xab)),
         ];
 
         let expected = [
@@ -166,13 +192,13 @@ mod byte_conversion_test {
     #[test]
     fn sum_to_bytes() {
         let instrs = [
-            Instruction::Sum(Reg::A, Reg::B),
-            Instruction::Sum(Reg::CH, Reg::AL),
+            Instruction::Sum(CR::Register(Reg::A), Reg::B),
+            Instruction::Sum(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00010011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00010001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -183,13 +209,13 @@ mod byte_conversion_test {
     #[test]
     fn sub_to_bytes() {
         let instrs = [
-            Instruction::Sub(Reg::A, Reg::B),
-            Instruction::Sub(Reg::CH, Reg::AL),
+            Instruction::Sub(CR::Register(Reg::A), Reg::B),
+            Instruction::Sub(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00011011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00011011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00011001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -200,13 +226,13 @@ mod byte_conversion_test {
     #[test]
     fn mul_to_bytes() {
         let instrs = [
-            Instruction::Mul(Reg::A, Reg::B),
-            Instruction::Mul(Reg::CH, Reg::AL),
+            Instruction::Mul(CR::Register(Reg::A), Reg::B),
+            Instruction::Mul(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00100011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00100001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -217,13 +243,13 @@ mod byte_conversion_test {
     #[test]
     fn div_to_bytes() {
         let instrs = [
-            Instruction::Div(Reg::A, Reg::B),
-            Instruction::Div(Reg::CH, Reg::AL),
+            Instruction::Div(CR::Register(Reg::A), Reg::B),
+            Instruction::Div(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00101011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00101011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00101001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -234,13 +260,13 @@ mod byte_conversion_test {
     #[test]
     fn and_to_bytes() {
         let instrs = [
-            Instruction::And(Reg::A, Reg::B),
-            Instruction::And(Reg::CH, Reg::AL),
+            Instruction::And(CR::Register(Reg::A), Reg::B),
+            Instruction::And(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00110011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00110011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00110001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -251,13 +277,13 @@ mod byte_conversion_test {
     #[test]
     fn or_to_bytes() {
         let instrs = [
-            Instruction::Or(Reg::A, Reg::B),
-            Instruction::Or(Reg::CH, Reg::AL),
+            Instruction::Or(CR::Register(Reg::A), Reg::B),
+            Instruction::Or(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b00111011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b00111011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b00111001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -282,13 +308,13 @@ mod byte_conversion_test {
     #[test]
     fn xor_to_bytes() {
         let instrs = [
-            Instruction::Xor(Reg::A, Reg::B),
-            Instruction::Xor(Reg::CH, Reg::AL),
+            Instruction::Xor(CR::Register(Reg::A), Reg::B),
+            Instruction::Xor(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01001011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01001011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01001001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -299,13 +325,13 @@ mod byte_conversion_test {
     #[test]
     fn shr_to_bytes() {
         let instrs = [
-            Instruction::Shr(Reg::A, Reg::B),
-            Instruction::Shr(Reg::CH, Reg::AL),
+            Instruction::Shr(CR::Register(Reg::A), Reg::B),
+            Instruction::Shr(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01010011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01010011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01010001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -316,13 +342,13 @@ mod byte_conversion_test {
     #[test]
     fn shl_to_bytes() {
         let instrs = [
-            Instruction::Shl(Reg::A, Reg::B),
-            Instruction::Shl(Reg::CH, Reg::AL),
+            Instruction::Shl(CR::Register(Reg::A), Reg::B),
+            Instruction::Shl(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01011011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01011011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01011001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -333,13 +359,13 @@ mod byte_conversion_test {
     #[test]
     fn cmp_to_bytes() {
         let instrs = [
-            Instruction::Cmp(Reg::A, Reg::B),
-            Instruction::Cmp(Reg::CH, Reg::AL),
+            Instruction::Cmp(CR::Register(Reg::A), Reg::B),
+            Instruction::Cmp(CR::Constant(0xab), Reg::AL),
         ];
 
         let expected = [
             [24, 0b01100011, Reg::A.code(), Reg::B.code(), 0, 0],
-            [24, 0b01100011, Reg::CH.code(), Reg::AL.code(), 0, 0],
+            [32, 0b01100001, 0, 0xab, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -349,50 +375,104 @@ mod byte_conversion_test {
 
     #[test]
     fn jmp_to_bytes() {
-        assert_eq!(
-            Instruction::Jmp(Reg::D).to_bytes(),
-            [16, 0b01101011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jmp(CR::Register(Reg::D)),
+            Instruction::Jmp(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b01101010, Reg::D.code(), 0, 0, 0],
+            [24, 0b01101000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
     fn jeq_to_bytes() {
-        assert_eq!(
-            Instruction::Jeq(Reg::D).to_bytes(),
-            [16, 0b01110011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jeq(CR::Register(Reg::D)),
+            Instruction::Jeq(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b01110010, Reg::D.code(), 0, 0, 0],
+            [24, 0b01110000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
     fn jne_to_bytes() {
-        assert_eq!(
-            Instruction::Jne(Reg::D).to_bytes(),
-            [16, 0b01111011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jne(CR::Register(Reg::D)),
+            Instruction::Jne(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b01111010, Reg::D.code(), 0, 0, 0],
+            [24, 0b01111000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
     fn jgt_to_bytes() {
-        assert_eq!(
-            Instruction::Jgt(Reg::D).to_bytes(),
-            [16, 0b10000011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jgt(CR::Register(Reg::D)),
+            Instruction::Jgt(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b10000010, Reg::D.code(), 0, 0, 0],
+            [24, 0b10000000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
     fn jlt_to_bytes() {
-        assert_eq!(
-            Instruction::Jlt(Reg::D).to_bytes(),
-            [16, 0b10001011, Reg::D.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Jlt(CR::Register(Reg::D)),
+            Instruction::Jlt(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b10001010, Reg::D.code(), 0, 0, 0],
+            [24, 0b10001000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
     fn push_to_bytes() {
-        assert_eq!(
-            Instruction::Push(Reg::C).to_bytes(),
-            [16, 0b10010011, Reg::C.code(), 0, 0, 0]
-        );
+        let instrs = [
+            Instruction::Push(CR::Register(Reg::D)),
+            Instruction::Push(CR::Constant(0xab)),
+        ];
+
+        let expected = [
+            [16, 0b10010010, Reg::D.code(), 0, 0, 0],
+            [24, 0b10010000, 0, 0xab, 0, 0],
+        ];
+
+        for i in 0..instrs.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
     }
 
     #[test]
