@@ -554,6 +554,11 @@ mod instruction_tests {
     }
 
     #[test]
+    fn sum_8_bit_overflow() {
+        todo!();
+    }
+
+    #[test]
     fn sum_of_negatives_with_overflow() {
         let mut cpu = Cpu::vals(-32767, -4, 0, 0);
         let mut mem = Mem::default();
@@ -586,6 +591,11 @@ mod instruction_tests {
     }
 
     #[test]
+    fn sub_8_bits_overflow() {
+        todo!();
+    }
+
+    #[test]
     fn mul_within_16_bits() {
         let mut cpu = Cpu::vals(4, -5, 10, 0);
         let mut mem = Mem::default();
@@ -605,6 +615,11 @@ mod instruction_tests {
 
         assert_eq!(cpu.b, 0);
         assert!(cpu.flags & Cpu::FLAG_OVERFLOW != 0);
+    }
+
+    #[test]
+    fn mul_overflow() {
+        todo!();
     }
 
     #[test]
