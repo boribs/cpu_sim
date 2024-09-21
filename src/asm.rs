@@ -213,7 +213,7 @@ impl cpu::Instruction {
                 let b = get_cr(&mut bytes, mem, b_reg, index)?;
                 cpu::Instruction::Ld(a, b)
             }
-            2..=6 => {
+            2..=7 => {
                 let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
                 let b = cpu::Reg::from_code(mem.read(index + bytes))?;
                 bytes += 1;
@@ -224,6 +224,7 @@ impl cpu::Instruction {
                     4 => cpu::Instruction::Mul(a, b),
                     5 => cpu::Instruction::Div(a, b),
                     6 => cpu::Instruction::And(a, b),
+                    7 => cpu::Instruction::Or(a, b),
                     _ => unimplemented!(),
                 }
             }
@@ -728,6 +729,35 @@ mod read_from_mem {
         let expected = [
             (Instruction::And(CR::Register(Reg::A), Reg::B), 3),
             (Instruction::And(CR::Constant(0xab), Reg::AL), 4),
+        ];
+
+        let actual = [
+            Instruction::from_mem(&mem, 0),
+            Instruction::from_mem(&mem, 3),
+        ];
+
+        for i in 0..expected.len() {
+            assert!(actual[i].is_ok());
+            let a = actual[i].unwrap();
+            assert_eq!(a, expected[i]);
+        }
+    }
+
+    #[test]
+    fn read_or() {
+        let mem = Mem::set(vec![
+            0b00111011,
+            Reg::A.code(),
+            Reg::B.code(),
+            0b00111001,
+            0,
+            0xab,
+            Reg::AL.code(),
+        ]);
+
+        let expected = [
+            (Instruction::Or(CR::Register(Reg::A), Reg::B), 3),
+            (Instruction::Or(CR::Constant(0xab), Reg::AL), 4),
         ];
 
         let actual = [
