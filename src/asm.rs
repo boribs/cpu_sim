@@ -20,6 +20,28 @@ impl cpu::Reg {
             cpu::Reg::DL => 12,
         }
     }
+
+    pub fn from_code(code: u8) -> Result<Self, ()> {
+        if code > 12 {
+            Err(())
+        } else {
+            Ok(match code {
+                1 => cpu::Reg::A,
+                2 => cpu::Reg::AH,
+                3 => cpu::Reg::AL,
+                4 => cpu::Reg::B,
+                5 => cpu::Reg::BH,
+                6 => cpu::Reg::BL,
+                7 => cpu::Reg::C,
+                8 => cpu::Reg::CH,
+                9 => cpu::Reg::CL,
+                10 => cpu::Reg::D,
+                11 => cpu::Reg::DH,
+                12 => cpu::Reg::DL,
+                _ => unreachable!(),
+            })
+        }
+    }
 }
 
 impl cpu::Instruction {
