@@ -184,6 +184,44 @@ impl cpu::Instruction {
             dest_b as u8,
         ]
     }
+
+    pub fn from_mem(mem: &cpu::Mem, index: usize) -> Result<(cpu::Instruction, usize), ()> {
+        let mut bytes = 1;
+        let instr = mem.read(index);
+        let (a_reg, b_reg) = (instr & Self::A_REG_MASK != 0, instr & Self::B_REG_MASK != 0);
+        let instr = instr >> 3;
+
+        let a = if a_reg {
+            bytes += 1;
+            let r = cpu::Reg::from_code(mem.read(index + 1))?;
+            cpu::CR::Register(r)
+        } else {
+            bytes += 2;
+            cpu::CR::Constant(mem.read_16(index + 1))
+        };
+
+        let out = if instr < 13 && instr != 8 {
+            let b = if b_reg {
+                let r = cpu::Reg::from_code(mem.read(index + bytes))?;
+                bytes += 1;
+                cpu::CR::Register(r)
+            } else {
+                bytes += 2;
+                cpu::CR::Constant(mem.read_16(index + bytes - 2))
+            };
+
+            match instr {
+                1 => cpu::Instruction::Ld(a, b),
+                _ => unimplemented!(),
+            }
+        } else {
+            match instr {
+                _ => panic!()
+            }
+        };
+
+        Ok((out, bytes))
+    }
 }
 
 #[cfg(test)]
@@ -503,5 +541,46 @@ mod byte_conversion_test {
             Instruction::Pop(Reg::C).to_bytes(),
             [16, 0b10011011, Reg::C.code(), 0, 0, 0]
         );
+    }
+}
+
+#[cfg(test)]
+mod read_from_mem {
+    use crate::cpu::*;
+
+    #[test]
+    fn read_ld() {
+        let mem = Mem::set(vec![
+            0b00001011,
+            Reg::A.code(),
+            Reg::B.code(),
+            0b00001001,
+            0,
+            0x11,
+            Reg::B.code(),
+            0b00001000,
+            0xff,
+            0xfb,
+            0,
+            0xab
+        ]);
+
+        let expected = [
+            (Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)), 3),
+            (Instruction::Ld(CR::Constant(0x11), CR::Register(Reg::B)), 4),
+            (Instruction::Ld(CR::Constant(0xfffb), CR::Constant(0xab)), 5),
+        ];
+
+        let actual = [
+            Instruction::from_mem(&mem, 0),
+            Instruction::from_mem(&mem, 3),
+            Instruction::from_mem(&mem, 7),
+        ];
+
+        for i in 0..expected.len() {
+            assert!(actual[i].is_ok());
+            let a = actual[i].unwrap();
+            assert_eq!(a, expected[i]);
+        }
     }
 }
