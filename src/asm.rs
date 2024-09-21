@@ -148,8 +148,7 @@ impl cpu::Instruction {
                     }
                 };
             }
-            cpu::Instruction::Not(a)
-            | cpu::Instruction::Pop(a) => {
+            cpu::Instruction::Not(a) | cpu::Instruction::Pop(a) => {
                 instr |= Self::A_REG_MASK | Self::B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
@@ -214,7 +213,12 @@ impl cpu::Instruction {
                 let b = get_cr(&mut bytes, mem, b_reg, index)?;
                 cpu::Instruction::Ld(a, b)
             }
+            2 => {
+                let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
+                let b = cpu::Reg::from_code(mem.read(index + bytes))?;
                 bytes += 1;
+                cpu::Instruction::Sum(a, b)
+            }
             _ => unimplemented!(),
         };
 
@@ -576,6 +580,35 @@ mod read_from_mem {
             Instruction::from_mem(&mem, 0),
             Instruction::from_mem(&mem, 3),
             Instruction::from_mem(&mem, 7),
+        ];
+
+        for i in 0..expected.len() {
+            assert!(actual[i].is_ok());
+            let a = actual[i].unwrap();
+            assert_eq!(a, expected[i]);
+        }
+    }
+
+    #[test]
+    fn read_sum() {
+        let mem = Mem::set(vec![
+            0b00010011,
+            Reg::A.code(),
+            Reg::B.code(),
+            0b00010001,
+            0,
+            0xab,
+            Reg::AL.code(),
+        ]);
+
+        let expected = [
+            (Instruction::Sum(CR::Register(Reg::A), Reg::B), 3),
+            (Instruction::Sum(CR::Constant(0xab), Reg::AL), 4),
+        ];
+
+        let actual = [
+            Instruction::from_mem(&mem, 0),
+            Instruction::from_mem(&mem, 3),
         ];
 
         for i in 0..expected.len() {
