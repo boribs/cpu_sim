@@ -4,7 +4,7 @@
 const MASK_HIGH: i16 = 0xff00u16 as i16;
 const MASK_LOW: i16 = 0x00ff;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Reg {
     A,
     AH,
@@ -33,14 +33,14 @@ impl Reg {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 // Constant or Register
 pub enum CR {
     Constant(u16),
     Register(Reg),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Instruction {
     Ld(CR, CR),
     // integer arithmetic
