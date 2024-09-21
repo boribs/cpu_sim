@@ -186,38 +186,36 @@ impl cpu::Instruction {
     }
 
     pub fn from_mem(mem: &cpu::Mem, index: usize) -> Result<(cpu::Instruction, usize), ()> {
+        fn get_cr(
+            bytes: &mut usize,
+            mem: &cpu::Mem,
+            is_reg: bool,
+            index: usize,
+        ) -> Result<cpu::CR, ()> {
+            Ok(if is_reg {
+                *bytes += 1;
+                let r = cpu::Reg::from_code(mem.read(index))?;
+                cpu::CR::Register(r)
+            } else {
+                *bytes += 2;
+                cpu::CR::Constant(mem.read_16(index))
+            })
+        }
+
         let mut bytes = 1;
         let instr = mem.read(index);
         let (a_reg, b_reg) = (instr & Self::A_REG_MASK != 0, instr & Self::B_REG_MASK != 0);
         let instr = instr >> 3;
 
-        let a = if a_reg {
-            bytes += 1;
-            let r = cpu::Reg::from_code(mem.read(index + 1))?;
-            cpu::CR::Register(r)
-        } else {
-            bytes += 2;
-            cpu::CR::Constant(mem.read_16(index + 1))
-        };
-
-        let out = if instr < 13 && instr != 8 {
-            let b = if b_reg {
-                let r = cpu::Reg::from_code(mem.read(index + bytes))?;
+        let out = match instr {
+            1 => {
+                let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
+                let index = index + bytes;
+                let b = get_cr(&mut bytes, mem, b_reg, index)?;
+                cpu::Instruction::Ld(a, b)
+            }
                 bytes += 1;
-                cpu::CR::Register(r)
-            } else {
-                bytes += 2;
-                cpu::CR::Constant(mem.read_16(index + bytes - 2))
-            };
-
-            match instr {
-                1 => cpu::Instruction::Ld(a, b),
-                _ => unimplemented!(),
-            }
-        } else {
-            match instr {
-                _ => panic!()
-            }
+            _ => unimplemented!(),
         };
 
         Ok((out, bytes))
@@ -562,11 +560,14 @@ mod read_from_mem {
             0xff,
             0xfb,
             0,
-            0xab
+            0xab,
         ]);
 
         let expected = [
-            (Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)), 3),
+            (
+                Instruction::Ld(CR::Register(Reg::A), CR::Register(Reg::B)),
+                3,
+            ),
             (Instruction::Ld(CR::Constant(0x11), CR::Register(Reg::B)), 4),
             (Instruction::Ld(CR::Constant(0xfffb), CR::Constant(0xab)), 5),
         ];
