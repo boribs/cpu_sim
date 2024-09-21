@@ -92,6 +92,10 @@ impl Mem {
         }
     }
 
+    pub fn set(v: Vec<u8>) -> Self {
+        Mem { array: v }
+    }
+
     pub fn read(&self, index: usize) -> u8 {
         assert!(index < self.array.len());
         self.array[index]
@@ -510,12 +514,6 @@ mod instruction_tests {
                 d,
                 ..Default::default()
             }
-        }
-    }
-
-    impl Mem {
-        fn set(v: Vec<u8>) -> Self {
-            Mem { array: v }
         }
     }
 
