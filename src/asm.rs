@@ -229,7 +229,7 @@ impl cpu::Instruction {
                     10 => cpu::Instruction::Shr(a, b),
                     11 => cpu::Instruction::Shl(a, b),
                     12 => cpu::Instruction::Cmp(a, b),
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
                 }
             }
             8 | 19 => {
@@ -242,9 +242,14 @@ impl cpu::Instruction {
                     cpu::Instruction::Pop(a)
                 }
             }
-            13 => {
+            13..=14 => {
                 let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
-                cpu::Instruction::Jmp(a)
+
+                match instr {
+                    13 => cpu::Instruction::Jmp(a),
+                    14 => cpu::Instruction::Jeq(a),
+                    _ => unreachable!(),
+                }
             }
             other => unimplemented!("{}", other)
         };
@@ -931,6 +936,33 @@ mod read_from_mem {
         let expected = [
             (Instruction::Jmp(CR::Register(Reg::A)), 2),
             (Instruction::Jmp(CR::Constant(0xab)), 3),
+        ];
+
+        let actual = [
+            Instruction::from_mem(&mem, 0),
+            Instruction::from_mem(&mem, 2),
+        ];
+
+        for i in 0..expected.len() {
+            assert!(actual[i].is_ok());
+            let a = actual[i].unwrap();
+            assert_eq!(a, expected[i]);
+        }
+    }
+
+    #[test]
+    fn read_jeq() {
+        let mem = Mem::set(vec![
+            0b01110010,
+            Reg::A.code(),
+            0b01110000,
+            0,
+            0xab,
+        ]);
+
+        let expected = [
+            (Instruction::Jeq(CR::Register(Reg::A)), 2),
+            (Instruction::Jeq(CR::Constant(0xab)), 3),
         ];
 
         let actual = [
