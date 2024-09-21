@@ -232,10 +232,15 @@ impl cpu::Instruction {
                     _ => unimplemented!(),
                 }
             }
-            8 => {
+            8 | 19 => {
                 let a = cpu::Reg::from_code(mem.read(index + bytes))?;
                 bytes += 1;
-                cpu::Instruction::Not(a)
+
+                if instr == 8 {
+                    cpu::Instruction::Not(a)
+                } else {
+                    cpu::Instruction::Pop(a)
+                }
             }
             _ => unimplemented!(),
         };
@@ -908,4 +913,17 @@ mod read_from_mem {
             assert_eq!(a, expected[i]);
         }
     }
+
+    #[test]
+    fn read_pop() {
+        let mem = Mem::set(vec![0b10011011, Reg::A.code()]);
+
+        let expected =  (Instruction::Pop(Reg::A), 2);
+        let actual = Instruction::from_mem(&mem, 0);
+
+        assert!(actual.is_ok());
+        let a = actual.unwrap();
+        assert_eq!(a, expected);
+    }
+
 }
