@@ -23,6 +23,11 @@ impl cpu::Reg {
 }
 
 impl cpu::Instruction {
+    // these bits are set if the parameters A/B are registers.
+    // TODO: Call them something else.
+    const A_REG_MASK: u8 = 0b00000010;
+    const B_REG_MASK: u8 = 0b00000001;
+
     pub fn code(&self) -> u8 {
         match self {
             cpu::Instruction::Ld(_, _) => 1,
@@ -54,11 +59,6 @@ impl cpu::Instruction {
         let mut dest_a: u16;
         let mut dest_b: u16 = 0;
 
-        // these bits are set if the parameters A/B are registers.
-        // TODO: Call them something else.
-        const A_REG_MASK: u8 = 0b00000010;
-        const B_REG_MASK: u8 = 0b00000001;
-
         match self {
             cpu::Instruction::Ld(a, b) => {
                 match a {
@@ -69,7 +69,7 @@ impl cpu::Instruction {
                     cpu::CR::Register(r) => {
                         dest_a = r.code() as u16;
                         bit_count += 8;
-                        instr |= A_REG_MASK;
+                        instr |= Self::A_REG_MASK;
                     }
                 }
 
@@ -95,7 +95,7 @@ impl cpu::Instruction {
                             dest_b = (r.code() as u16) << 8;
                         }
                         bit_count += 8;
-                        instr |= B_REG_MASK;
+                        instr |= Self::B_REG_MASK;
                     }
                 }
             }
@@ -109,11 +109,11 @@ impl cpu::Instruction {
             | cpu::Instruction::Shr(a, b)
             | cpu::Instruction::Shl(a, b)
             | cpu::Instruction::Cmp(a, b) => {
-                instr |= B_REG_MASK;
+                instr |= Self::B_REG_MASK;
 
                 match a {
                     cpu::CR::Register(r) => {
-                        instr |= A_REG_MASK;
+                        instr |= Self::A_REG_MASK;
                         dest_a = (r.code() as u16) << 8;
                         dest_a |= b.code() as u16;
                         bit_count = 24;
@@ -128,7 +128,7 @@ impl cpu::Instruction {
             }
             cpu::Instruction::Not(a)
             | cpu::Instruction::Pop(a) => {
-                instr |= A_REG_MASK | B_REG_MASK;
+                instr |= Self::A_REG_MASK | Self::B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
             } // other => unimplemented!("{:?}", other),
@@ -141,7 +141,7 @@ impl cpu::Instruction {
             | cpu::Instruction::Push(a) => {
                 match a {
                     cpu::CR::Register(r) => {
-                        instr |= A_REG_MASK;
+                        instr |= Self::A_REG_MASK;
                         bit_count = 16;
                         dest_a = (r.code() as u16) << 8;
                     }
