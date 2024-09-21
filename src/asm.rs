@@ -232,6 +232,11 @@ impl cpu::Instruction {
                     _ => unimplemented!(),
                 }
             }
+            8 => {
+                let a = cpu::Reg::from_code(mem.read(index + bytes))?;
+                bytes += 1;
+                cpu::Instruction::Not(a)
+            }
             _ => unimplemented!(),
         };
 
@@ -774,6 +779,18 @@ mod read_from_mem {
             let a = actual[i].unwrap();
             assert_eq!(a, expected[i]);
         }
+    }
+
+    #[test]
+    fn read_not() {
+        let mem = Mem::set(vec![0b01000011, Reg::A.code()]);
+
+        let expected =  (Instruction::Not(Reg::A), 2);
+        let actual = Instruction::from_mem(&mem, 0);
+
+        assert!(actual.is_ok());
+        let a = actual.unwrap();
+        assert_eq!(a, expected);
     }
 
     #[test]
