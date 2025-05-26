@@ -5,9 +5,11 @@ A 16-bit simulated CPU, inspired by the Intel 8088.
 
 ## Roadmap
 
- - [ ] [Base](#Base-Instructions) set
+ - [x] [Base](#Base-Instructions) instruction set
+ - [ ] Assembler
+ - [ ] Instruction parser
  - [ ] [Syscalls](#Syscalls)
- - [ ] [Graphics](#Graphics-Instructions) set
+ - [ ] [Graphics](#Graphics-Instructions) instruction set
 
 ## Registers
 
@@ -63,7 +65,7 @@ NOTE:
 <!-- |||| -->
 
 ### Graphics Instructions
-Unimplemented.
+Not implemented.
 
 ## Flags
 
