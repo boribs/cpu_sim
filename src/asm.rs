@@ -52,7 +52,6 @@ impl cpu::Instruction {
 
     pub fn code(&self) -> u8 {
         match self {
-            cpu::Instruction::Set(_, _) => 0,
             cpu::Instruction::Ld(_, _) => 1,
             cpu::Instruction::Sum(_, _) => 2,
             cpu::Instruction::Sub(_, _) => 3,
@@ -72,6 +71,7 @@ impl cpu::Instruction {
             cpu::Instruction::Jlt(_) => 17,
             cpu::Instruction::Push(_) => 18,
             cpu::Instruction::Pop(_) => 19,
+            cpu::Instruction::Set(_, _) => 20,
             // other => unimplemented!("Code for {:?} not implemented.", other),
         }
     }
@@ -85,7 +85,6 @@ impl cpu::Instruction {
         match self {
             cpu::Instruction::Set(val, reg) => {
                 bit_count += 24;
-                instr = 0;
                 dest_a = *val;
                 dest_b = (reg.code() as u16) << 8;
             }
@@ -213,11 +212,6 @@ impl cpu::Instruction {
         let instr = instr >> 3;
 
         let out = match instr {
-            0 => {
-                bytes = 3;
-                let val = mem.read_16(index + 1);
-                cpu::Instruction::Set(val, cpu::Reg::from_code(mem.read(index + 3))?)
-            }
             1 => {
                 let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
                 let index = index + bytes;
@@ -266,6 +260,11 @@ impl cpu::Instruction {
                     _ => unreachable!(),
                 }
             }
+            20 => {
+                bytes += 3;
+                let val = mem.read_16(index + 1);
+                cpu::Instruction::Set(val, cpu::Reg::from_code(mem.read(index + 3))?)
+            }
             other => unimplemented!("{}", other)
         };
 
@@ -287,10 +286,10 @@ mod byte_conversion_test {
         ];
 
         let expected = [
-            [32, 0, 0, 0x43, Reg::B.code(), 0],
-            [32, 0, 0, 0x11, Reg::BH.code(), 0],
-            [32, 0, 0, 10, Reg::A.code(), 0],
-            [32, 0, 0xff, 0xba, Reg::AL.code(), 0],
+            [32, 0b10100000, 0, 0x43, Reg::B.code(), 0],
+            [32, 0b10100000, 0, 0x11, Reg::BH.code(), 0],
+            [32, 0b10100000, 0, 10, Reg::A.code(), 0],
+            [32, 0b10100000, 0xff, 0xba, Reg::AL.code(), 0],
         ];
 
         for i in 0..expected.len() {
@@ -621,15 +620,15 @@ mod read_from_mem {
     #[test]
     fn read_set() {
         let mem = Mem::set(vec![
-            0b0, 0, 0x43, Reg::B.code(), 0,
-            0b0, 0, 0x11, Reg::BH.code(), 0,
-            0b0, 0, 10, Reg::A.code(), 0,
+            0b10100000, 0, 0x43, Reg::B.code(), 0,
+            0b10100000, 0, 0x11, Reg::BH.code(), 0,
+            0b10100000, 0, 10, Reg::A.code(), 0,
         ]);
 
         let expected = [
-            (Instruction::Set(0x43, Reg::B), 3),
-            (Instruction::Set(0x11, Reg::BH), 3),
-            (Instruction::Set(10, Reg::A), 3),
+            (Instruction::Set(0x43, Reg::B), 4),
+            (Instruction::Set(0x11, Reg::BH), 4),
+            (Instruction::Set(10, Reg::A), 4),
         ];
 
         let actual = [
