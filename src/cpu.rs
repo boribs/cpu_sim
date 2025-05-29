@@ -617,6 +617,7 @@ mod instruction_tests {
     }
 
     #[test]
+    #[ignore]
     fn sum_8_bit_overflow() {
         todo!();
     }
@@ -654,6 +655,7 @@ mod instruction_tests {
     }
 
     #[test]
+    #[ignore]
     fn sub_8_bits_overflow() {
         todo!();
     }
@@ -681,6 +683,7 @@ mod instruction_tests {
     }
 
     #[test]
+    #[ignore]
     fn mul_overflow() {
         todo!();
     }
