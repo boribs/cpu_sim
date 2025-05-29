@@ -6,8 +6,8 @@ A 16-bit simulated CPU, inspired by the Intel 8088.
 ## Roadmap
 
  - [x] [Base](#Base-Instructions) instruction set
- - [ ] Assembler
  - [ ] Instruction parser
+ - [ ] Assembler
  - [ ] [Syscalls](#Syscalls)
  - [ ] [Graphics](#Graphics-Instructions) instruction set
 
@@ -37,7 +37,8 @@ NOTE:
 
 | instruction | description | syntax |
 | ----------- | ----------- | ------ |
-| ld          | Loads a value into either memory or a register | ld `<const/reg/mem>` `<reg/mem>` |
+| set         | Sets some value into a register | set `<const>` `<reg>` |
+| ld          | Loads a value into either memory or a register | ld `<reg/mem>` `<reg/mem>` |
 | sum         | Adds the values of a and b and stores the result in b | sum `<reg a>` `<reg b>` |
 | sub         | Subtracts the values of a and b and stores the result b | sub `<reg a>` `<reg b>`|
 | mul         | Multiplies the values of a and b and stores the result b | mul `<reg a>` `<reg b>` |
@@ -65,6 +66,7 @@ NOTE:
 <!-- |||| -->
 
 ### Graphics Instructions
+
 Not implemented.
 
 ## Flags

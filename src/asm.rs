@@ -52,6 +52,7 @@ impl cpu::Instruction {
 
     pub fn code(&self) -> u8 {
         match self {
+            cpu::Instruction::Set(_, _) => 0,
             cpu::Instruction::Ld(_, _) => 1,
             cpu::Instruction::Sum(_, _) => 2,
             cpu::Instruction::Sub(_, _) => 3,
@@ -82,6 +83,12 @@ impl cpu::Instruction {
         let mut dest_b: u16 = 0;
 
         match self {
+            cpu::Instruction::Set(val, reg) => {
+                bit_count += 24;
+                instr = 0;
+                dest_a = *val;
+                dest_b = (reg.code() as u16) << 8;
+            }
             cpu::Instruction::Ld(a, b) => {
                 match a {
                     cpu::CR::Constant(m) => {
@@ -152,8 +159,7 @@ impl cpu::Instruction {
                 instr |= Self::A_REG_MASK | Self::B_REG_MASK;
                 bit_count = 16;
                 dest_a = (a.code() as u16) << 8;
-            } // other => unimplemented!("{:?}", other),
-
+            }
             cpu::Instruction::Jmp(a)
             | cpu::Instruction::Jeq(a)
             | cpu::Instruction::Jne(a)
@@ -207,6 +213,11 @@ impl cpu::Instruction {
         let instr = instr >> 3;
 
         let out = match instr {
+            0 => {
+                bytes = 3;
+                let val = mem.read_16(index + 1);
+                cpu::Instruction::Set(val, cpu::Reg::from_code(mem.read(index + 3))?)
+            }
             1 => {
                 let a = get_cr(&mut bytes, mem, a_reg, index + 1)?;
                 let index = index + bytes;
@@ -265,6 +276,27 @@ impl cpu::Instruction {
 #[cfg(test)]
 mod byte_conversion_test {
     use crate::cpu::*;
+
+    #[test]
+    fn set_to_bytes() {
+        let instrs = [
+            Instruction::Set(0x43, Reg::B),
+            Instruction::Set(0x11, Reg::BH),
+            Instruction::Set(10, Reg::A),
+            Instruction::Set(0xffba, Reg::AL),
+        ];
+
+        let expected = [
+            [32, 0, 0, 0x43, Reg::B.code(), 0],
+            [32, 0, 0, 0x11, Reg::BH.code(), 0],
+            [32, 0, 0, 10, Reg::A.code(), 0],
+            [32, 0, 0xff, 0xba, Reg::AL.code(), 0],
+        ];
+
+        for i in 0..expected.len() {
+            assert_eq!(instrs[i].to_bytes(), expected[i]);
+        }
+    }
 
     #[test]
     fn ld_to_bytes() {
@@ -585,6 +617,33 @@ mod byte_conversion_test {
 #[cfg(test)]
 mod read_from_mem {
     use crate::cpu::*;
+
+    #[test]
+    fn read_set() {
+        let mem = Mem::set(vec![
+            0b0, 0, 0x43, Reg::B.code(), 0,
+            0b0, 0, 0x11, Reg::BH.code(), 0,
+            0b0, 0, 10, Reg::A.code(), 0,
+        ]);
+
+        let expected = [
+            (Instruction::Set(0x43, Reg::B), 3),
+            (Instruction::Set(0x11, Reg::BH), 3),
+            (Instruction::Set(10, Reg::A), 3),
+        ];
+
+        let actual = [
+            Instruction::from_mem(&mem, 0),
+            Instruction::from_mem(&mem, 5),
+            Instruction::from_mem(&mem, 10),
+        ];
+
+        for i in 0..expected.len() {
+            assert!(actual[i].is_ok());
+            let a = actual[i].unwrap();
+            assert_eq!(a, expected[i]);
+        }
+    }
 
     #[test]
     fn read_ld() {

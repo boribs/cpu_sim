@@ -42,6 +42,7 @@ pub enum CR {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Instruction {
+    Set(u16, Reg),
     Ld(CR, CR),
     // integer arithmetic
     Sum(CR, Reg),
@@ -71,7 +72,7 @@ pub enum Instruction {
 }
 
 pub struct Mem {
-    array: Vec<u8>,
+    pub array: Vec<u8>,
     // store eventually
     // - program start pointer
     // - data start pointer
@@ -200,11 +201,15 @@ impl Cpu {
     //     self.flags &= !flag;
     // }
 
+    fn instr_set(&mut self, val: u16, to: Reg) {
+        self.reg_write(to, val as i16);
+    }
+
     fn instr_ld(&mut self, from: CR, to: CR, mem: &mut Mem) {
         match from {
             CR::Register(r) => match to {
                 CR::Register(t) => {
-                    if r.is_16_bit() != r.is_16_bit() {
+                    if r.is_16_bit() != t.is_16_bit() {
                         panic!("Can't move from {:?} to {:?}.", r, t);
                     }
                 }
@@ -478,6 +483,7 @@ impl Cpu {
 
     pub fn execute(&mut self, instr: Instruction, mem: &mut Mem) {
         match instr {
+            Instruction::Set(val, dest) => self.instr_set(val, dest),
             Instruction::Ld(val, dest) => self.instr_ld(val, dest, mem),
             Instruction::Sum(a, b) => self.instr_sum(a, b),
             Instruction::Sub(a, b) => self.instr_sub(a, b),
@@ -515,6 +521,43 @@ mod instruction_tests {
                 ..Default::default()
             }
         }
+    }
+
+    #[test]
+    fn set_8() {
+        let mut cpu = Cpu::default();
+        let mut mem = Mem::set(vec![0]);
+        cpu.execute(
+            Instruction::Set(16, Reg::AL),
+            &mut mem,
+        );
+        cpu.execute(
+            Instruction::Set(16, Reg::AH),
+            &mut mem,
+        );
+
+        assert_eq!(cpu.a & 0x00ff, 16);
+        assert_eq!((cpu.a as u16 & 0xff00) >> 8, 16);
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    fn set_16() {
+        let mut cpu = Cpu::default();
+        let mut mem = Mem::set(vec![0]);
+        cpu.execute(
+            Instruction::Set(1600, Reg::A),
+            &mut mem,
+        );
+
+        assert_eq!(cpu.a, 1600);
+        assert_eq!(cpu.flags, 0);
+    }
+
+    #[test]
+    #[ignore]
+    fn set_16_negative() {
+        todo!();
     }
 
     #[test]
